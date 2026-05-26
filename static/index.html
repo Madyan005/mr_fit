@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mr. Fit</title>
+  <meta name="description" content="Mr. Fit — AI-powered fitness and nutrition tracker. Log workouts and meals with natural language." />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+  <!-- ═══════════════════════════════════ AUTH SCREEN ═══════════════ -->
+  <div id="auth-screen">
+    <div class="auth-card">
+      <div class="auth-logo">Mr<span>.</span>Fit</div>
+      <div class="auth-sub">Speed and Simplicity.</div>
+
+      <div style="margin-bottom:20px">
+        <label
+          style="display:block;font-size:10px;color:var(--muted);font-family:var(--fm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Backend
+          URL</label>
+        <input id="backend-url" type="text"
+          style="width:100%;padding:9px 12px;background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--fm);font-size:12px;outline:none;transition:border-color .15s"
+          placeholder="https://your-backend.onrender.com" />
+        <div style="font-size:10px;color:var(--muted);font-family:var(--fm);margin-top:5px">Point to your FastAPI server
+        </div>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+        <button class="auth-tab" onclick="switchAuthTab('signup')">Sign Up</button>
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+        <input id="auth-email" type="email" placeholder="you@example.com" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="auth-password" type="password" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter') submitAuth()" />
+      </div>
+
+      <button class="btn-primary" id="auth-btn" onclick="submitAuth()">Login</button>
+      <div class="auth-error" id="auth-error"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ MAIN APP ═══════════════════ -->
+  <div id="app">
+    <nav>
+      <div class="logo">Mr<span>.</span>Fit</div>
+      <div class="nav-right">
+        <div class="nav-tabs">
+          <button class="nav-tab active" onclick="showPage('track')">Track</button>
+          <button class="nav-tab" onclick="showPage('library')">Library</button>
+          <button class="nav-tab" onclick="showPage('stats')">Stats</button>
+          <button class="nav-tab" onclick="showPage('coach')">Coach</button>
+        </div>
+        <button class="btn-logout" onclick="logout()">
+          <i class="ti ti-logout" style="font-size:12px;vertical-align:-1px;margin-right:3px"></i>Out
+        </button>
+      </div>
+    </nav>
+
+    <!-- PAGE 1: TRACK -->
+    <div class="page active" id="page-track">
+      <div class="day-header">
+        <div>
+          <div class="day-label">Today</div>
+          <div class="day-date" id="today-date">—</div>
+        </div>
+      </div>
+      <div class="summary-grid">
+        <div class="summary-card cals">
+          <div class="summary-label">Calories</div>
+          <div class="summary-value" id="total-cals">0</div>
+          <div class="summary-unit">kcal today</div>
+        </div>
+        <div class="summary-card lift">
+          <div class="summary-label">Volume</div>
+          <div class="summary-value" id="total-volume">0</div>
+          <div class="summary-unit">kg lifted today</div>
+        </div>
+      </div>
+
+      <div class="magic-section">
+        <div class="magic-label"><span class="pulse"></span>Magic Input</div>
+
+        <div id="prefill-banner" class="prefill-banner" style="display:none">
+          <i class="ti ti-bolt" style="color:var(--accent);font-size:14px"></i>
+          Logging: <span class="prefill-exercise" id="prefill-name">—</span>
+          <span style="color:var(--muted);font-size:11px;font-family:var(--fm)">· Add reps &amp; weight</span>
+          <button class="prefill-clear" onclick="clearPrefill()">×</button>
+        </div>
+
+        <div class="magic-box">
+          <textarea class="magic-ta" id="magic-input"
+            placeholder="e.g. '3 sets of 12 reps bench press at 80kg' or 'had a chicken salad and coffee'"></textarea>
+          <div class="magic-footer">
+            <span class="magic-hint">Ctrl+Enter to submit</span>
+            <div class="magic-actions">
+              <button class="btn-mic" id="mic-btn" onclick="toggleMic()" title="Voice input">
+                <i class="ti ti-microphone"></i>
+              </button>
+              <button class="btn-log" id="log-btn" onclick="logEntry()">Log it</button>
+            </div>
+          </div>
+        </div>
+        <div class="parse-status" id="parse-status"></div>
+      </div>
+
+      <div class="log-section-label">Today's log</div>
+      <div class="log-list" id="today-log">
+        <div class="empty-state">Nothing logged yet</div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: LIBRARY -->
+    <div class="page" id="page-library">
+      <div class="search-bar">
+        <i class="ti ti-search search-icon"></i>
+        <input type="text" id="exercise-search" placeholder="Search exercises…" oninput="filterExercises()" />
+      </div>
+      <div class="muscle-groups" id="muscle-chips"></div>
+      <div id="quick-log-container"></div>
+      <div class="exercise-grid" id="exercise-list"></div>
+      <div class="history-section">
+        <div class="history-header">
+          <div class="section-title">Activity Heatmap</div>
+        </div>
+        <div class="heatmap-wrapper">
+          <div class="heatmap-container" id="heatmap-container">
+            <div class="empty-state">Loading…</div>
+          </div>
+          <div class="heatmap-legend">
+            <span>Less</span>
+            <div class="legend-square intensity-0"></div>
+            <div class="legend-square intensity-1"></div>
+            <div class="legend-square intensity-2"></div>
+            <div class="legend-square intensity-3"></div>
+            <span>More</span>
+          </div>
+        </div>
+        <div class="day-details-container" id="day-details-container">
+          <div class="day-details-header">
+            <span id="day-details-date">Date</span>
+            <button class="day-details-close" onclick="closeDayDetails()">×</button>
+          </div>
+          <div id="day-details-list" class="log-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 3: STATS -->
+    <div class="page" id="page-stats">
+      <div class="stats-header">
+        <div class="stats-title">Statistics</div>
+        <div class="stats-subtitle">Last 7 days</div>
+      </div>
+      <div class="stats-pills" id="stats-pills">
+        <div class="stat-pill">
+          <div class="stat-pill-label">Avg Volume / Day</div>
+          <div class="stat-pill-val" id="s-avg-vol">—</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-label">Avg Calories / Day</div>
+          <div class="stat-pill-val" id="s-avg-cal">—</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-label">Workouts</div>
+          <div class="stat-pill-val" id="s-workouts">—</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-label">Meals Logged</div>
+          <div class="stat-pill-val" id="s-meals">—</div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Lifting Volume</div>
+        <div class="chart-value" id="avg-volume">— <span class="unit">kg avg</span></div>
+        <canvas id="volume-chart" height="140"></canvas>
+        <div class="no-data" id="volume-empty" style="display:none">Log workouts to see your trend</div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Daily Calories</div>
+        <div class="chart-value" id="avg-cals">— <span class="unit">kcal avg</span></div>
+        <canvas id="cals-chart" height="140"></canvas>
+        <div class="no-data" id="cals-empty" style="display:none">Log meals to see your trend</div>
+      </div>
+    </div>
+    <!-- PAGE 4: COACH CHAT -->
+    <div class="page" id="page-coach">
+      <div class="coach-header">
+        <div class="coach-title">AI Coach</div>
+        <div class="coach-subtitle">Ask anything about your training</div>
+      </div>
+
+      <div class="coach-chat-window" id="coach-chat-window">
+        <div class="coach-bubble coach-bubble--bot">
+          <div class="coach-bubble-avatar">AI</div>
+          <div class="coach-bubble-body">
+            Hey! I&rsquo;m your personal fitness coach. Ask me anything &mdash; what to train today, how your progress looks, or why a lift feels stuck.
+          </div>
+        </div>
+      </div>
+
+      <div class="coach-input-row">
+        <input
+          id="coach-input"
+          class="coach-input"
+          type="text"
+          placeholder="Ask your coach…"
+          onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendCoachMessage(); }"
+        />
+        <button class="coach-send" id="coach-send-btn" onclick="sendCoachMessage()">
+          <i class="ti ti-send"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+
+</html>
