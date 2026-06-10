@@ -37,6 +37,10 @@ let heatmapLoaded = false;
 let editingLogId = null;
 let editingGroupName = null;
 let coachHistory = []; // [{role: 'user'|'coach', text: '...'}]
+let selectedStatsDays = 7;
+let customExercises = JSON.parse(localStorage.getItem('mrfit_custom_exercises') || '[]');
+let coachPlanCounter = 0;
+const _coachPlans = {};
 
 // Restore saved backend URL into the input
 document.getElementById('backend-url').value = baseUrl;
@@ -380,7 +384,7 @@ async function saveEditLog(id, type) {
       loadLibraryPage();
     }
   } catch (e) {
-    alert('Edit failed: ' + e.message);
+    showToast('Edit failed: ' + e.message, 'error');
     if (e.message.includes('401')) logout();
   }
 }
@@ -411,7 +415,7 @@ async function deleteLog(id) {
       loadLibraryPage();
     }
   } catch (e) {
-    alert('Delete failed: ' + e.message);
+    showToast('Delete failed: ' + e.message, 'error');
   }
 }
 
@@ -441,7 +445,7 @@ async function saveEditGroup(name, firstId) {
     heatmapLoaded = false;
     if (document.getElementById('page-library').classList.contains('active')) loadLibraryPage();
   } catch (e) {
-    alert('Edit failed: ' + e.message);
+    showToast('Edit failed: ' + e.message, 'error');
   }
 }
 
@@ -457,7 +461,7 @@ async function deleteGroup(name) {
     heatmapLoaded = false;
     if (document.getElementById('page-library').classList.contains('active')) loadLibraryPage();
   } catch (e) {
-    alert('Delete failed: ' + e.message);
+    showToast('Delete failed: ' + e.message, 'error');
   }
 }
 
@@ -526,6 +530,7 @@ async function inlineUpdateLog(id, field, value) {
     if (log && updated) {
       Object.assign(log, updated);
     }
+    heatmapLoaded = false;
   } catch (e) {
     console.error('Inline update failed:', e.message);
     // On failure, re-render to show the actual server state
@@ -629,27 +634,43 @@ function clearPrefill() {
 
 function toggleMic() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { alert('Voice input requires Chrome or Edge.'); return; }
+  if (!SR) { showToast('Voice input requires Chrome or Edge', 'error'); return; }
 
   if (listening) { recognition.stop(); return; }
 
   recognition = new SR();
   recognition.lang = 'en-US';
-  recognition.interimResults = false;
+  recognition.interimResults = true;
+  recognition.continuous = true;
   recognition.onresult = (e) => {
-    document.getElementById('magic-input').value = e.results[0][0].transcript;
+    let finalTranscript = '';
+    let interimTranscript = '';
+    for (let i = 0; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        finalTranscript += e.results[i][0].transcript;
+      } else {
+        interimTranscript += e.results[i][0].transcript;
+      }
+    }
+    const ta = document.getElementById('magic-input');
+    ta.value = finalTranscript + interimTranscript;
+    ta.style.opacity = interimTranscript ? '0.7' : '1';
   };
   recognition.onend = () => {
     listening = false;
     document.getElementById('mic-btn').classList.remove('listening');
+    document.getElementById('magic-input').style.opacity = '1';
   };
-  recognition.onerror = () => {
+  recognition.onerror = (ev) => {
     listening = false;
     document.getElementById('mic-btn').classList.remove('listening');
+    document.getElementById('magic-input').style.opacity = '1';
+    if (ev.error !== 'aborted') showToast('Voice error: ' + ev.error, 'error');
   };
   recognition.start();
   listening = true;
   document.getElementById('mic-btn').classList.add('listening');
+  showToast('Listening… speak now', 'info', 2000);
 }
 
 document.addEventListener('keydown', e => {
@@ -678,7 +699,7 @@ async function loadLibraryPage() {
 }
 
 function renderMuscleChips() {
-  const groups = ['All', ...new Set(EXERCISES.map(e => e.muscle))];
+  const groups = ['All', ...new Set(getAllExercises().map(e => e.muscle))];
   document.getElementById('muscle-chips').innerHTML = groups.map(g =>
     `<button class="muscle-chip ${g === selectedMuscle ? 'active' : ''}" onclick="selectMuscle('${g}')">${g}</button>`
   ).join('');
@@ -688,14 +709,16 @@ function selectMuscle(m) { selectedMuscle = m; renderMuscleChips(); filterExerci
 
 function filterExercises() {
   const q = (document.getElementById('exercise-search')?.value || '').toLowerCase();
-  const filtered = EXERCISES.filter(e =>
+  const filtered = getAllExercises().filter(e =>
     (selectedMuscle === 'All' || e.muscle === selectedMuscle) &&
     (e.name.toLowerCase().includes(q) || e.muscle.toLowerCase().includes(q))
   );
   document.getElementById('exercise-list').innerHTML = filtered.map(e => {
     const d = JSON.stringify(e).replace(/"/g, '&quot;');
+    const isCustom = e.custom === true;
     return `<div class="ex-card ${selectedExercise?.name === e.name ? 'selected' : ''}" onclick='selectExercise(${d})'>
-      <div><div class="ex-name">${e.name}</div><div class="ex-meta">${e.muscle} · ${e.type}</div></div>
+      <div><div class="ex-name">${e.name}${isCustom ? '<span class="custom-badge">Custom</span>' : ''}</div><div class="ex-meta">${e.muscle} · ${e.type}</div></div>
+      ${isCustom ? `<button class="ex-remove" onclick="event.stopPropagation();removeCustomExercise(this.dataset.name)" data-name="${escapeHTML(e.name)}" title="Remove">×</button>` : ''}
       <i class="ti ti-chevron-right ex-arrow"></i>
     </div>`;
   }).join('') || '<div class="empty-state" style="padding:20px">No exercises found</div>';
@@ -752,7 +775,7 @@ function closeQuickLog() { selectedExercise = null; document.getElementById('qui
 
 async function saveQuickLog() {
   const valid = sets.filter(s => s.reps || s.weight);
-  if (!valid.length) { alert('Add at least one set.'); return; }
+  if (!valid.length) { showToast('Add at least one set', 'error'); return; }
 
   const sessionId = Date.now().toString() + Math.random().toString(36).substring(2, 7);
 
@@ -784,7 +807,7 @@ async function saveQuickLog() {
     renderTodayLog();
     closeQuickLog();
   } catch (e) {
-    alert('Save failed: ' + e.message);
+    showToast('Save failed: ' + e.message, 'error');
     if (e.message.includes('401')) logout();
   }
 }
@@ -848,9 +871,15 @@ function closeDayDetails() {
 // ══════════════════════════════════════════════════════════════
 async function loadStats() {
   try {
-    const data = await api('GET', '/stats?days=7');
+    const data = await api('GET', `/stats?days=${selectedStatsDays}`);
 
-    const labels = data.days.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' }));
+    const labels = data.days.map(d => {
+      const dt = new Date(d.date + 'T12:00:00');
+      return selectedStatsDays <= 7
+        ? dt.toLocaleDateString('en', { weekday: 'short' })
+        : dt.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    });
+    document.getElementById('stats-subtitle').textContent = 'Last ' + selectedStatsDays + ' days';
     const volumes = data.days.map(d => d.volume);
     const calories = data.days.map(d => d.calories);
     const hasVol = volumes.some(v => v > 0);
@@ -873,7 +902,7 @@ async function loadStats() {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', font: { family: 'DM Mono', size: 11 } } },
+        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', font: { family: 'DM Mono', size: 11 }, maxTicksLimit: 10, maxRotation: 0 } },
         y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888', font: { family: 'DM Mono', size: 11 } }, beginAtZero: true },
       },
     };
@@ -975,6 +1004,8 @@ function appendCoachBubble(role, text, workoutPlan = []) {
 
   let planHTML = '';
   if (workoutPlan.length > 0) {
+    const planId = coachPlanCounter++;
+    _coachPlans[planId] = workoutPlan;
     const rows = workoutPlan.map(ex => `
       <div class="coach-plan-row">
         <div class="coach-plan-name">${escapeHTML(ex.exercise)}</div>
@@ -983,7 +1014,7 @@ function appendCoachBubble(role, text, workoutPlan = []) {
           ${ex.notes ? `<span class="coach-plan-note"> · ${escapeHTML(ex.notes)}</span>` : ''}
         </div>
       </div>`).join('');
-    planHTML = `<div class="coach-plan">${rows}</div>`;
+    planHTML = `<div class="coach-plan">${rows}<button class="btn-log-plan" id="log-plan-${planId}" onclick="logCoachPlan(${planId})"><i class="ti ti-download" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Log This Workout</button></div>`;
   }
 
   const el = document.createElement('div');
@@ -1011,4 +1042,133 @@ function appendTypingIndicator() {
 function removeTypingIndicator(id) {
   const el = document.getElementById(id);
   if (el) el.remove();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  UTILITY: GET ALL EXERCISES (built-in + custom)
+// ══════════════════════════════════════════════════════════════
+function getAllExercises() {
+  return [...EXERCISES, ...customExercises];
+}
+
+// ══════════════════════════════════════════════════════════════
+//  STATS TIME RANGE SELECTOR
+// ══════════════════════════════════════════════════════════════
+function selectStatsDays(days) {
+  selectedStatsDays = days;
+  document.querySelectorAll('.range-pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.range-pill').forEach(p => {
+    if (p.textContent.trim() === days + 'd') p.classList.add('active');
+  });
+  loadStats();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TOAST NOTIFICATION SYSTEM
+// ══════════════════════════════════════════════════════════════
+function showToast(message, type = 'info', duration = 3000) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LOG COACH WORKOUT PLAN
+// ══════════════════════════════════════════════════════════════
+async function logCoachPlan(planId) {
+  const plan = _coachPlans[planId];
+  if (!plan || !plan.length) return;
+
+  const btn = document.getElementById(`log-plan-${planId}`);
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Logging…';
+
+  const sessionBase = Date.now().toString() + Math.random().toString(36).substring(2, 7);
+
+  try {
+    for (const ex of plan) {
+      const numSets = ex.sets || 1;
+      const exSessionId = sessionBase + '-' + ex.exercise.replace(/\s+/g, '').substring(0, 8).toLowerCase();
+      for (let i = 0; i < numSets; i++) {
+        await api('POST', '/logs', {
+          type: 'EXERCISE',
+          session_id: exSessionId,
+          name: ex.exercise,
+          sets: 1,
+          reps: ex.reps || null,
+          weight: ex.weight || null,
+          volume: Math.round((ex.reps || 0) * (ex.weight || 0) * 100) / 100,
+          raw_text: `Coach plan: ${ex.exercise}`,
+        });
+      }
+    }
+
+    btn.innerHTML = '✓ Logged!';
+    btn.className = 'btn-log-plan logged';
+    showToast('Workout plan logged successfully!', 'success');
+
+    loadTodayLogs();
+    heatmapLoaded = false;
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-download" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Log This Workout';
+    showToast('Failed to log plan: ' + e.message, 'error');
+    if (e.message.includes('401')) logout();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CUSTOM EXERCISE MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+function toggleAddExerciseForm() {
+  const form = document.getElementById('add-exercise-form');
+  form.classList.toggle('show');
+  if (form.classList.contains('show')) {
+    document.getElementById('custom-ex-name').value = '';
+    setTimeout(() => document.getElementById('custom-ex-name').focus(), 50);
+  }
+}
+
+function addCustomExercise() {
+  const name = document.getElementById('custom-ex-name').value.trim();
+  const muscle = document.getElementById('custom-ex-muscle').value;
+  const type = document.getElementById('custom-ex-type').value;
+
+  if (!name) { showToast('Enter an exercise name', 'error'); return; }
+
+  const exists = getAllExercises().some(e => e.name.toLowerCase() === name.toLowerCase());
+  if (exists) { showToast('Exercise already exists', 'error'); return; }
+
+  customExercises.push({ name, muscle, type, custom: true });
+  localStorage.setItem('mrfit_custom_exercises', JSON.stringify(customExercises));
+
+  toggleAddExerciseForm();
+  renderMuscleChips();
+  filterExercises();
+  showToast(`Added "${name}" to your library`, 'success');
+}
+
+function removeCustomExercise(name) {
+  customExercises = customExercises.filter(e => e.name !== name);
+  localStorage.setItem('mrfit_custom_exercises', JSON.stringify(customExercises));
+  if (selectedExercise && selectedExercise.name === name) {
+    selectedExercise = null;
+    document.getElementById('quick-log-container').innerHTML = '';
+  }
+  renderMuscleChips();
+  filterExercises();
+  showToast(`Removed "${name}"`, 'info');
 }

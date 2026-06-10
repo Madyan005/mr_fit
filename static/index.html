@@ -127,6 +127,38 @@
         <input type="text" id="exercise-search" placeholder="Search exercises…" oninput="filterExercises()" />
       </div>
       <div class="muscle-groups" id="muscle-chips"></div>
+      <div class="library-top-actions">
+        <button class="btn-add-exercise" onclick="toggleAddExerciseForm()">
+          <i class="ti ti-plus" style="font-size:12px"></i>Add Exercise
+        </button>
+      </div>
+      <div id="add-exercise-form" class="add-exercise-form">
+        <div class="form-row">
+          <input type="text" id="custom-ex-name" placeholder="Exercise name" onkeydown="if(event.key==='Enter') addCustomExercise()" />
+        </div>
+        <div class="form-row">
+          <select id="custom-ex-muscle">
+            <option value="Chest">Chest</option>
+            <option value="Back">Back</option>
+            <option value="Shoulders">Shoulders</option>
+            <option value="Legs">Legs</option>
+            <option value="Arms">Arms</option>
+            <option value="Core">Core</option>
+          </select>
+          <select id="custom-ex-type">
+            <option value="Barbell">Barbell</option>
+            <option value="Dumbbell">Dumbbell</option>
+            <option value="Machine">Machine</option>
+            <option value="Cable">Cable</option>
+            <option value="Bodyweight">Bodyweight</option>
+            <option value="Equipment">Equipment</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button class="btn-cancel-edit" onclick="toggleAddExerciseForm()">Cancel</button>
+          <button class="btn-save-edit" onclick="addCustomExercise()">Add</button>
+        </div>
+      </div>
       <div id="quick-log-container"></div>
       <div class="exercise-grid" id="exercise-list"></div>
       <div class="history-section">
@@ -159,8 +191,18 @@
     <!-- PAGE 3: STATS -->
     <div class="page" id="page-stats">
       <div class="stats-header">
-        <div class="stats-title">Statistics</div>
-        <div class="stats-subtitle">Last 7 days</div>
+        <div class="stats-top-row">
+          <div>
+            <div class="stats-title">Statistics</div>
+            <div class="stats-subtitle" id="stats-subtitle">Last 7 days</div>
+          </div>
+          <div class="stats-range-bar">
+            <button class="range-pill active" onclick="selectStatsDays(7)">7d</button>
+            <button class="range-pill" onclick="selectStatsDays(14)">14d</button>
+            <button class="range-pill" onclick="selectStatsDays(30)">30d</button>
+            <button class="range-pill" onclick="selectStatsDays(90)">90d</button>
+          </div>
+        </div>
       </div>
       <div class="stats-pills" id="stats-pills">
         <div class="stat-pill">
