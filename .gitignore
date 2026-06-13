@@ -1,0 +1,19 @@
+# Environment variables / secrets
+mr_fit.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Database
+*.db
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store

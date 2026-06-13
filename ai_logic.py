@@ -1,6 +1,9 @@
 import os
 import json
+import logging
 import warnings
+
+logger = logging.getLogger(__name__)
 from typing import Optional
 from dotenv import load_dotenv
 from google import genai
@@ -51,6 +54,7 @@ Task: Extract EVERY fitness or nutrition item mentioned from the user input.
         )
         data_list = json.loads(response.text)
     except Exception as e:
+        logger.exception("AI parse error")
         raise HTTPException(status_code=502, detail=f"AI parse error: {str(e)}")
 
     if not isinstance(data_list, list):
@@ -295,6 +299,7 @@ Guidelines:
         )
         result = json.loads(response.text)
     except Exception as e:
+        logger.exception("Coach AI error")
         raise HTTPException(status_code=502, detail=f"Coach AI error: {str(e)}")
 
     # Ensure required keys exist with sensible defaults
@@ -383,6 +388,7 @@ No markdown, no explanation outside the JSON.
         )
         result = json.loads(response.text)
     except Exception as e:
+        logger.exception("Coach chat error")
         raise HTTPException(status_code=502, detail=f"Coach chat error: {str(e)}")
 
     return {
