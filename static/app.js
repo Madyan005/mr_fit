@@ -61,6 +61,14 @@ function getBase() {
   return (document.getElementById('backend-url').value.trim() || baseUrl).replace(/\/$/, '');
 }
 
+// Custom error class that carries the HTTP status code
+class ApiError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function api(method, path, body) {
   const url = getBase() + path;
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
@@ -71,12 +79,24 @@ async function api(method, path, body) {
   try {
     resp = await fetch(url, opts);
   } catch (e) {
-    throw new Error('Network error — is the backend running?');
+    throw new ApiError('Network error — is the backend running?', 0);
   }
 
   if (resp.status === 204) return null;
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(data.detail || `HTTP ${resp.status}`);
+
+  let data;
+  try {
+    data = await resp.json();
+  } catch (e) {
+    throw new ApiError(`Server error (HTTP ${resp.status})`, resp.status);
+  }
+
+  if (!resp.ok) {
+    const detail = typeof data.detail === 'string'
+      ? data.detail
+      : `HTTP ${resp.status}`;
+    throw new ApiError(detail, resp.status);
+  }
   return data;
 }
 
@@ -172,7 +192,7 @@ async function loadTodayLogs() {
     todayLogs = await api('GET', `/logs?date=${date}`);
     renderTodayLog();
   } catch (e) {
-    if (e.message.includes('401')) logout();
+    if (e.status === 401) logout();
   }
 }
 
@@ -385,7 +405,7 @@ async function saveEditLog(id, type) {
     }
   } catch (e) {
     showToast('Edit failed: ' + e.message, 'error');
-    if (e.message.includes('401')) logout();
+    if (e.status === 401) logout();
   }
 }
 
@@ -603,7 +623,7 @@ async function logEntry() {
   } catch (e) {
     showStatus('error', '✗ ' + e.message);
     setTimeout(() => showStatus('', ''), 4000);
-    if (e.message.includes('401')) logout();
+    if (e.status === 401) logout();
   }
 
   btn.disabled = false;
@@ -808,7 +828,7 @@ async function saveQuickLog() {
     closeQuickLog();
   } catch (e) {
     showToast('Save failed: ' + e.message, 'error');
-    if (e.message.includes('401')) logout();
+    if (e.status === 401) logout();
   }
 }
 
@@ -894,8 +914,8 @@ async function loadStats() {
 
     document.getElementById('volume-empty').style.display = hasVol ? 'none' : 'block';
     document.getElementById('cals-empty').style.display = hasCal ? 'none' : 'block';
-    document.getElementById('volume-chart').style.display = hasVol ? 'block' : 'none';
-    document.getElementById('cals-chart').style.display = hasCal ? 'block' : 'none';
+    document.getElementById('volume-chart').parentElement.style.display = hasVol ? 'block' : 'none';
+    document.getElementById('cals-chart').parentElement.style.display = hasCal ? 'block' : 'none';
 
     const base = {
       responsive: true,
@@ -944,7 +964,7 @@ async function loadStats() {
       });
     }
   } catch (e) {
-    if (e.message.includes('401')) logout();
+    if (e.status === 401) logout();
   }
 }
 
@@ -987,11 +1007,11 @@ async function sendCoachMessage() {
     appendCoachBubble('bot', answer, plan);
   } catch (e) {
     removeTypingIndicator(typingId);
-    const msg = e.message.includes('429')
+    const msg = e.status === 429
       ? e.message
       : 'Something went wrong. Try again in a moment.';
     appendCoachBubble('bot', msg);
-    if (e.message.includes('401')) logout();
+    if (e.status === 401) logout();
   }
 
   sendBtn.disabled = false;
@@ -1126,7 +1146,7 @@ async function logCoachPlan(planId) {
     btn.disabled = false;
     btn.innerHTML = '<i class="ti ti-download" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Log This Workout';
     showToast('Failed to log plan: ' + e.message, 'error');
-    if (e.message.includes('401')) logout();
+    if (e.status === 401) logout();
   }
 }
 

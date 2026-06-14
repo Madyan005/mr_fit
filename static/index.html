@@ -225,13 +225,17 @@
       <div class="chart-card">
         <div class="chart-title">Lifting Volume</div>
         <div class="chart-value" id="avg-volume">— <span class="unit">kg avg</span></div>
-        <canvas id="volume-chart" height="140"></canvas>
+        <div style="position:relative;height:180px">
+          <canvas id="volume-chart"></canvas>
+        </div>
         <div class="no-data" id="volume-empty" style="display:none">Log workouts to see your trend</div>
       </div>
       <div class="chart-card">
         <div class="chart-title">Daily Calories</div>
         <div class="chart-value" id="avg-cals">— <span class="unit">kcal avg</span></div>
-        <canvas id="cals-chart" height="140"></canvas>
+        <div style="position:relative;height:180px">
+          <canvas id="cals-chart"></canvas>
+        </div>
         <div class="no-data" id="cals-empty" style="display:none">Log meals to see your trend</div>
       </div>
     </div>
