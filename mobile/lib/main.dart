@@ -15,6 +15,7 @@ Future<void> main() async {
   final secrets = SecureSecretStore();
   final opened = await EncryptedDb.open(await getApplicationSupportDirectory(), secrets);
   runApp(ProviderScope(
+    retry: noAutoRetry,
     overrides: [
       ...sourceOverrides(SourceMode.mock),
       secretStoreProvider.overrideWithValue(secrets),

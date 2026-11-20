@@ -23,8 +23,6 @@ class HomeShell extends ConsumerStatefulWidget {
 }
 
 class _HomeShellState extends ConsumerState<HomeShell> {
-  int _index = 0;
-
   @override
   void initState() {
     super.initState();
@@ -59,7 +57,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final pending = ref.watch(pendingUploadsProvider).value ?? 0;
-    final page = widget.pages[_index];
+    final index = ref.watch(shellTabProvider).clamp(0, widget.pages.length - 1);
+    final page = widget.pages[index];
     return Scaffold(
       appBar: AppBar(
         title: Text(page.label),
@@ -83,12 +82,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       body: Column(
         children: [
           const SimulatedBanner(),
-          Expanded(child: KeyedSubtree(key: ValueKey(_index), child: page.builder())),
+          Expanded(child: KeyedSubtree(key: ValueKey(index), child: page.builder())),
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        selectedIndex: index,
+        onDestinationSelected: (i) => ref.read(shellTabProvider.notifier).select(i),
         destinations: [for (final p in widget.pages) NavigationDestination(icon: Icon(p.icon), label: p.label)],
       ),
     );

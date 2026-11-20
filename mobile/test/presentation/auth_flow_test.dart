@@ -33,7 +33,7 @@ void main() {
     expect(find.text('SIMULATED'), findsOneWidget);
     expect(h.secrets.values['auth.access_token'], 'a1');
     expect(h.secrets.values['db.owner_email'], 'me@example.com');
-    expect(h.http.seen.single.body, {'email': 'me@example.com', 'password': 'secret1'});
+    expect(h.http.seen.first.body, {'email': 'me@example.com', 'password': 'secret1'});
     await h.dispose(tester);
   });
 
@@ -80,7 +80,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('auth.submit')), findsOneWidget);
     expect(h.secrets.values.containsKey('auth.access_token'), isFalse);
-    expect(h.http.seen.single.body, {'refresh_token': 'refresh-1-xxxxxxxxxxxxxxxx'});
+    expect(h.http.seen.singleWhere((r) => r.path == '/auth/logout').body, {'refresh_token': 'refresh-1-xxxxxxxxxxxxxxxx'});
     await h.dispose(tester);
   });
 

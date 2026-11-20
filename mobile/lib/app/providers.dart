@@ -12,6 +12,22 @@ import '../data/local/app_database.dart';
 import '../data/storage/secret_store.dart';
 import '../data/sync/set_repository.dart';
 import '../data/sync/sync_service.dart';
+import '../data/voice/voice_input.dart';
+
+/// Riverpod 3 retries failing providers automatically. API errors are shown with a
+/// Retry button instead, so automatic retry is off app-wide (`ProviderScope(retry:)`).
+Duration? noAutoRetry(int retryCount, Object error) => null;
+
+final voiceInputProvider = Provider<VoiceInput>((ref) => SpeechToTextVoiceInput());
+
+/// Selected bottom-navigation tab (0 Track, 1 Library, 2 Stats, 3 Coach).
+final shellTabProvider = NotifierProvider<ShellTab, int>(ShellTab.new);
+
+class ShellTab extends Notifier<int> {
+  @override
+  int build() => 0;
+  void select(int i) => state = i;
+}
 
 /// Bound in `main.dart` (Keystore-backed) and in tests (in-memory).
 final secretStoreProvider = Provider<SecretStore>((ref) => throw UnimplementedError('bind secretStoreProvider'));
