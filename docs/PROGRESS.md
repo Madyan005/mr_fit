@@ -3,7 +3,7 @@
 Updated after every step. Decisions and assumptions live in [DECISIONS.md](DECISIONS.md).
 Branch: `feat/mr-fit-2`.
 
-## Status: 4 of 7 steps done; step 5 in progress (5a ✅, 5b ✅, Phase A toolchain ✅, 5c ⏭, 5d ⏳)
+## Status: 4 of 7 steps done; step 5 in progress (5a ✅, 5b ✅, Phase A ✅, 5c ✅, 5d ⏭)
 
 | # | Step | Status | Commit |
 |---|---|---|---|
@@ -14,21 +14,20 @@ Branch: `feat/mr-fit-2`.
 | 5a | Flutter skeleton, domain abstractions, Dart contract mirror | ✅ done | `7f11d79` |
 | 5b | Seeded mocks (sensor, vision, time sync) + MetricsEngine + Isolate worker + golden tests | ✅ done | `73db396` |
 | A | Phase A: install the Flutter/Android toolchain; analyze, test, build and run the 5a/5b code for real | ✅ done | `bdbc305` … `9a94364` (one commit per fix) |
-| 5c | Data layer (API client, secure storage, drift+SQLCipher, retry queue) + ported screens (Auth, Track, Library+heatmap, Stats, Coach history) | ⏭ next | |
-| 5d | 7-phase screens (Device Connect → Rest audit), HUD + skeleton overlay, haptics/TTS, foreground task, SIMULATED banner, debug switch | ⏳ | |
+| 5c | Data layer (API client, secure storage, drift+SQLCipher, retry queue) + ported screens (Auth, Track, Library+heatmap, Stats, Coach history) | ✅ done | `d0b6e26` … `4b838a6` (7 checkpoints + live test) |
+| 5d | 7-phase screens (Device Connect → Rest audit), HUD + skeleton overlay, haptics/TTS, foreground task, SIMULATED banner, debug switch | ⏭ next | |
 | 6 | Integration + scripted ~7-minute demo runner | ⏳ | |
 | 7 | Final summary: real vs simulated, how to plug in real sensor/vision | ⏳ | |
 
 ## Exact next action
 
-Step 5c (Phase B), first change: `mobile/lib/data/api/api_client.dart`. It's a dio client with a
-Bearer interceptor and one refresh-on-401 retry, with tokens in `flutter_secure_storage` and the
-backend URL from Settings. After that:
-- the drift database (opened with a SQLCipher key from secure storage) with the sets retry queue
-- the ported screens (Auth, Track, Library + heatmap, Stats, Coach history)
-
-Run `flutter analyze` and `flutter test` after every checkpoint, and don't move on while either fails.
-The app already runs on the emulator, as a placeholder home screen with the SIMULATED banner.
+Step 5d, first change: a "Session" entry point (a fifth tab or a button on Track) that opens
+Phase 1 **Device Connect** on the mock sensor source from `bindings.dart`. The remaining phases
+follow the D-017 placeholder timings: Goal → Positioning → Calibration (TapTimeSync) → Live
+HUD with skeleton overlay → Set summary. A finished set goes through
+`SetRepository.saveCompletedSet`; the queue and the Coach screen already handle it. Then the
+foreground task, haptics/TTS and the debug Mock/Real switch.
+Same gate after every checkpoint: `flutter analyze` and `flutter test` must both exit 0.
 
 ## Open questions / pending decisions
 
@@ -45,9 +44,55 @@ The app already runs on the emulator, as a placeholder home screen with the SIMU
 | `flutter_tts` 4.2.5 applies the Kotlin Gradle Plugin; Flutter warns that future versions will refuse to build it | Builds today; already the latest version | Upstream plugin fix; re-check on each Flutter upgrade |
 | Project lives in OneDrive: syncing `build/` briefly locked `build/unit_test_assets` (one `flutter test` failed with "failed to delete a directory"; it passed on re-run) | Re-run works | User: move the repo out of OneDrive, or pause sync while building |
 | Second Flutter 3.50.1 SDK at `C:\Users\ASUS\flutter` (1.5 GB, installed by the VS Code extension); VS Code's Dart language server runs from it | Left alone; `C:\src\flutter` comes first on PATH | User: delete it, or point VS Code's `dart.flutterSdkPath` at `C:\src\flutter` |
-| Memory: 15 GB RAM; emulator (≈4 GB) + Gradle + Chrome nearly used up the commit limit | D-057 heap sizes; the emulator was stopped during the first build | Close heavy apps while building, or enlarge the page file (user choice) |
+| Memory: 15 GB RAM; emulator (≈4 GB) + Gradle + Chrome nearly used up the commit limit. In 5c a full `flutter test` run crashed test VMs with "Out of memory" while idle Gradle/Kotlin daemons and the emulator were still up | D-057 heap sizes; stop daemons (`gradlew --stop`) and the emulator when not needed | Close heavy apps while building, or enlarge the page file (user choice) |
+| OneDrive also interfered in 5c: build_runner could not delete `.dart_tool/build/generated`, and `flutter test` once failed copying its cache, then hung | Clear the folder and re-run | Same as above: move the repo out of OneDrive |
+| Fake-LLM card text ("Solid set…") contradicts a set over its VL cap; the deterministic next-set rule is right | Only the fake client; real model output goes through the number checker and rules | Check with real Ollama |
+| Track/heatmap/stats days are UTC (D-067), so near midnight "Today" can differ from the local date | Labelled "(UTC day)" | Decide if a server-side timezone parameter is wanted |
 
 ## Verification log
+
+### Step 5c — Data layer and ported screens (2026-11-21)
+Verified (run here):
+- **Gate at every checkpoint:** `flutter analyze` "No issues found!" and `flutter test` exit 0. Final: **103 tests pass, 1 skipped** (the opt-in live test). The backend is unchanged.
+- **API client** (18 tests against an in-process fake backend):
+  - The Bearer token, base URL and error mapping work.
+  - Three concurrent 401s cause exactly **one** `/auth/refresh`.
+  - A rejected refresh signs out; an offline refresh keeps the session; a still-401 retry does not loop.
+  - Created vs replayed vs conflicting `POST /sets` are told apart.
+- **Encrypted DB** (real SQLCipher on the host):
+  - `cipher_version` is non-empty, and the file has no SQLite header and no plaintext marker.
+  - The wrong key fails; a lost key moves the file aside.
+- **Retry queue:**
+  - Offline backoff timing and a lost response (200 replay) both work, and coaching waits for its set.
+  - 422 is permanent, 401 pauses without consuming items, and concurrent passes share one upload.
+- **Screens:** widget tests for Auth/session (9), Track (8), Library + heatmap (8), Stats (3) and Coach (8).
+- **Live end-to-end** (`test/e2e/live_backend_test.dart`, real dio + real SQLCipher file) against the real FastAPI app (SQLite, fake LLM, Gemini off). It covers:
+  - signup and duplicate (409), login, server-side volume;
+  - heatmap and stats, the 26-exercise library and a custom exercise with its 409;
+  - parse-entry 503, and a forced 401 → refresh with rotation;
+  - a set through DB → queue → `POST /sets` → coaching → `GET /sets`, an idempotent resend, and logout revoking the refresh family.
+
+  The server DB was checked afterwards (rows and revoked tokens as expected).
+- **On the emulator** (debug APK, Android 16, against the same live API at `10.0.2.2:8765`):
+  - The app starts, which shows SQLCipher opens on Android.
+  - Sign up works, and Track shows the parse-disabled message.
+  - A manual entry is saved (server volume 1537.5 kg, shown as 1538).
+  - Coach shows two fixture sets uploaded with curl. "Get coaching" fetched a card. Cards show the source, focus, cues and the next-set rule.
+  - The Library list is right, and the heatmap shows today at level 2 (3 activities).
+  - Stats shows 328 kg/day and 3 workouts.
+  - No FATAL or Flutter errors in logcat.
+- Bugs found and fixed by tests:
+  - 503 was treated as permanent. A server restart would have dropped sets.
+  - `TrackScreen.dispose()` used `ref`.
+
+Not verified:
+- A physical phone; real Ollama coaching on device; voice input (fake in tests, not tried on the emulator); Gemini parsing on (server side only).
+- Background sync while the app is closed (only while it runs; the foreground task is 5d).
+- Long-running queue behaviour across app restarts on a device (covered by DB tests only).
+
+Process notes:
+- Commit `00d80fe` (checkpoint 3) was made after a run that had 2 failures. My command chained the commit after a grep, not after the test exit code. The cause was test VMs running out of memory, not the code: re-run 3× with free memory, all green. The gate now checks exit codes (D-073).
+- While driving the emulator with adb input, one tap on "Add manually" ended on the Stats tab. It was not reproducible, and the next tap opened the sheet. Gboard's stylus tutorial also captured typed text once. Both were emulator input issues during manual checks; no app error was logged.
 
 ### Phase A — Toolchain, first real analyze/test/build/run (2026-11-20)
 Versions: Flutter 3.50.1 (stable, 2026-11-18) · Dart 3.14.0 · DevTools 2.61.0 · Android Studio 2026.2.2.10 ·
@@ -137,6 +182,14 @@ Not verified: `docker compose up`, image build, GPU passthrough, model pull.
 Read `mrfit_reverse_engineer.md` and every v1 source file. Report and code mismatches were recorded (13 routes, not 9; `mr_fit.env.md` missing; tracked secret and DB files; `/ai-coach` unused; library versions unverifiable).
 
 ## Files changed per step
+
+### Step 5c
+- **Data:** `mobile/lib/data/{storage/secret_store,auth/token_store,api/api_client,api/api_exception,api/api_models,api/mrfit_api,local/app_database,local/encrypted_db,sync/sync_service,sync/set_repository,voice/voice_input}.dart`
+- **App:** `mobile/lib/app/{providers,session,app}.dart`, `mobile/lib/main.dart`
+- **Screens:** `mobile/lib/presentation/{auth/auth_screen,shell/home_shell,logs/log_providers,logs/log_format,logs/log_list,logs/log_sheets,track/track_screen,library/library_screen,library/quick_log_sheet,library/activity_heatmap,stats/stats_screen,coach/coach_providers,coach/coach_screen,widgets/async_view}.dart`
+- **Tests:** `mobile/test/{flutter_test_config,widget_test}.dart`, `mobile/test/support/{fake_http,app_harness}.dart`, `mobile/test/data/{api_client,encrypted_db,sync_queue}_test.dart`, `mobile/test/presentation/{auth_flow,track_screen,library_screen,stats_screen,coach_screen}_test.dart`, `mobile/test/e2e/live_backend_test.dart`
+- **Android/config:** `mobile/android/app/src/main/AndroidManifest.xml` (`allowBackup=false`), `mobile/.gitignore` (`*.g.dart`)
+- **Docs:** `mobile/README.md`, `docs/DECISIONS.md` (D-064…D-073), `docs/PROGRESS.md`
 
 ### Phase A
 - `mobile/android/**` (new: `flutter create` scaffold), `mobile/.gitignore`, `mobile/.metadata`, `mobile/pubspec.lock`, `mobile/analysis_options.yaml` (excludes from `flutter create`)
