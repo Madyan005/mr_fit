@@ -51,6 +51,10 @@ class SetRepository {
     unawaited(_sync.runOnce());
   }
 
+  /// One stored set (sync state and, once the server answered, its coaching card).
+  Stream<LocalSet?> watchLocalSet(String setId) =>
+      (_db.select(_db.localSets)..where((t) => t.setId.equals(setId))).watchSingleOrNull();
+
   /// Newest first.
   Stream<List<LocalSet>> watchLocalSets() =>
       (_db.select(_db.localSets)..orderBy([(t) => OrderingTerm.desc(t.createdAt)])).watch();

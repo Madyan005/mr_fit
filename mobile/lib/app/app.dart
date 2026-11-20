@@ -4,17 +4,19 @@ import 'package:material_ui/material_ui.dart';
 import '../presentation/auth/auth_screen.dart';
 import '../presentation/coach/coach_screen.dart';
 import '../presentation/library/library_screen.dart';
+import '../presentation/session/session_tab.dart';
 import '../presentation/shell/home_shell.dart';
 import '../presentation/stats/stats_screen.dart';
 import '../presentation/track/track_screen.dart';
 import 'session.dart';
 
-/// Tabs of the signed-in app: the four ported v1 screens (step 5c).
+/// Tabs of the signed-in app: the four ported v1 screens (5c) and the session (5d).
 List<ShellPage> appPages() => [
       ShellPage('Track', Icons.today_outlined, () => const TrackScreen()),
       ShellPage('Library', Icons.fitness_center, () => const LibraryScreen()),
       ShellPage('Stats', Icons.insights_outlined, () => const StatsScreen()),
       ShellPage('Coach', Icons.sports_outlined, () => const CoachScreen()),
+      ShellPage('Session', Icons.sensors, () => const SessionTab()),
     ];
 
 class MrFitApp extends ConsumerWidget {

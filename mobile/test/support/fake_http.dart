@@ -24,9 +24,13 @@ typedef FakeHandler = Future<FakeReply> Function(SeenRequest req);
 /// In-process stand-in for the backend: route by "METHOD /path" (path without host).
 class FakeHttp implements HttpClientAdapter {
   final Map<String, FakeHandler> _routes = {};
+  final Map<String, FakeHandler> _prefixRoutes = {};
   final List<SeenRequest> seen = [];
 
   void on(String method, String path, FakeHandler handler) => _routes['$method $path'] = handler;
+
+  /// Matches any path starting with [prefix] when no exact route matches.
+  void onPrefix(String method, String prefix, FakeHandler handler) => _prefixRoutes['$method $prefix'] = handler;
 
   void reply(String method, String path, int status, [Object? body]) => on(method, path, (_) async => (status, body));
 
@@ -37,7 +41,9 @@ class FakeHttp implements HttpClientAdapter {
     final uri = options.uri;
     final req = SeenRequest(options.method, uri.path, uri.queryParameters, Map.of(options.headers), options.data);
     seen.add(req);
-    final h = _routes['${options.method} ${uri.path}'];
+    final key = '${options.method} ${uri.path}';
+    final h = _routes[key] ??
+        _prefixRoutes.entries.where((e) => key.startsWith(e.key)).map((e) => e.value).firstOrNull;
     if (h == null) {
       return ResponseBody.fromString(jsonEncode({'detail': 'Not Found'}), 404, headers: _json);
     }

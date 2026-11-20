@@ -34,7 +34,7 @@ class FakeVoiceInput implements VoiceInput {
 
 /// Everything a widget test needs: fake backend, in-memory secrets and DB, no timers.
 class AppHarness {
-  AppHarness({Map<String, String>? secrets, this.mode = SourceMode.mock})
+  AppHarness({Map<String, String>? secrets, this.mode = SourceMode.mock, this.extra = const []})
       : http = FakeHttp(),
         secrets = InMemorySecretStore({'settings.backend_url': 'http://api.test', ...?secrets}),
         db = EncryptedDb.inMemoryForTests() {
@@ -45,6 +45,9 @@ class AppHarness {
   final InMemorySecretStore secrets;
   final AppDatabase db;
   final SourceMode mode;
+
+  /// Extra overrides (e.g. the session's clock, cues and inline metrics).
+  final List<Override> extra;
 
   static const signedIn = {
     'auth.access_token': 'access-1',
@@ -61,6 +64,7 @@ class AppHarness {
         httpAdapterProvider.overrideWithValue(http),
         syncAutoStartProvider.overrideWithValue(false),
         voiceInputProvider.overrideWithValue(voice),
+        ...extra,
       ];
 
   /// Pumps [child] (default: the whole app) and settles.

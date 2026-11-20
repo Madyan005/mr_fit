@@ -129,7 +129,7 @@ class _SetCard extends ConsumerWidget {
           _SyncLine(entry: entry),
           const Divider(),
           if (card != null)
-            _CardView(card: card)
+            CoachingCardView(card: card)
           else if (entry.localState == SyncState.pending)
             const Text('Coaching is requested after the upload.')
           else if (entry.localState != SyncState.failed)
@@ -203,8 +203,10 @@ class _SyncLine extends ConsumerWidget {
   }
 }
 
-class _CardView extends StatelessWidget {
-  const _CardView({required this.card});
+/// One coaching card (source badge, summary, cues, next set). Shared by Coach and the
+/// session's rest audit.
+class CoachingCardView extends StatelessWidget {
+  const CoachingCardView({super.key, required this.card});
   final CoachingCard card;
 
   @override
