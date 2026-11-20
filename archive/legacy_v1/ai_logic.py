@@ -12,7 +12,7 @@ from fastapi import HTTPException
 # =======================
 # CONFIG
 # =======================
-load_dotenv("mr_fit.env")
+load_dotenv(os.path.join(os.path.dirname(__file__), "mr_fit.env"))
 
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 

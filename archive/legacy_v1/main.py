@@ -1,7 +1,11 @@
 import datetime
 import time
+import os
 from collections import defaultdict
 from typing import Optional
+
+# Absolute path to the directory where main.py lives
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,7 +57,7 @@ app.add_middleware(
 )
 
 # Serve static frontend files (style.css, app.js)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 
 # =======================
@@ -61,7 +65,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # =======================
 @app.get("/", summary="Serve frontend")
 def serve_frontend():
-    return FileResponse("static/index.html")
+    return FileResponse(os.path.join(BASE_DIR, "static", "index.html"))
 
 
 # =======================

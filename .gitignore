@@ -1,19 +1,47 @@
-# Environment variables / secrets
-mr_fit.env
+# ---------- Secrets (never commit) ----------
+.env
 *.env
+.env.*
+!.env.example
+mr_fit.env
+*.keystore
+*.jks
+key.properties
 
-# Python
+# ---------- Databases / data ----------
+*.db
+*.sqlite
+*.sqlite3
+
+# ---------- Python ----------
 __pycache__/
 *.py[cod]
 *.pyo
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Database
-*.db
+# ---------- Flutter / Dart (mobile/) ----------
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/app/debug/
+mobile/android/app/release/
+*.g.dart.bak
 
-# IDE
+# ---------- Local leftovers from the v1 layout ----------
+# "New folder/" still holds the untracked v1 env + db on disk; keep it out of git.
+New folder/
+
+# ---------- IDE / OS ----------
 .vscode/
 .idea/
-
-# OS
 Thumbs.db
 .DS_Store

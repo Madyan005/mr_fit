@@ -14,7 +14,7 @@ from models import UserDB
 # =======================
 # CONFIG
 # =======================
-load_dotenv("mr_fit.env")
+load_dotenv(os.path.join(os.path.dirname(__file__), "mr_fit.env"))
 
 SECRET_KEY = os.getenv("SECRET_KEY", "DEV_SECRET_ONLY_CHANGE_ME")
 ALGORITHM = "HS256"

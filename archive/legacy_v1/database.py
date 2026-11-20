@@ -6,7 +6,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # =======================
 # CONFIG  (load .env FIRST so os.getenv picks values up)
 # =======================
-load_dotenv("mr_fit.env")
+load_dotenv(os.path.join(os.path.dirname(__file__), "mr_fit.env"))
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mrfit.db")
 
