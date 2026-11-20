@@ -19,8 +19,9 @@ enum ApiErrorKind {
   /// 429 cooldown.
   rateLimited,
 
-  /// 503 for an optional feature that is switched off (e.g. Gemini text parsing).
-  disabled,
+  /// 503: the service is temporarily unavailable, or (for `/parse-entry` only) the optional
+  /// feature is switched off on this server. Retryable; the caller decides what it means.
+  unavailable,
 
   /// 5xx and anything else unexpected. Retryable.
   server,
@@ -33,8 +34,10 @@ class ApiException implements Exception {
   final int? statusCode;
 
   /// Worth retrying the identical request later (used by the sync queue).
-  bool get isTransient =>
-      kind == ApiErrorKind.network || kind == ApiErrorKind.server || kind == ApiErrorKind.rateLimited;
+  bool get isTransient => switch (kind) {
+        ApiErrorKind.network || ApiErrorKind.server || ApiErrorKind.rateLimited || ApiErrorKind.unavailable => true,
+        _ => false,
+      };
 
   factory ApiException.fromDio(DioException e) {
     final r = e.response;
@@ -49,7 +52,7 @@ class ApiException implements Exception {
       409 => ApiErrorKind.conflict,
       400 || 413 || 422 => ApiErrorKind.invalid,
       429 => ApiErrorKind.rateLimited,
-      503 => ApiErrorKind.disabled,
+      503 => ApiErrorKind.unavailable,
       _ => ApiErrorKind.server,
     };
     return ApiException(kind, msg, statusCode: code);

@@ -88,7 +88,8 @@ class MrFitApi {
   Future<StatsSummary> stats({int days = 7}) =>
       _call(() => _dio.get<Object?>('/stats', queryParameters: {'days': days}), StatsSummary.fromJson);
 
-  /// OPTIONAL Gemini parser. Throws [ApiErrorKind.disabled] when the server has it off.
+  /// OPTIONAL Gemini parser. A 503 ([ApiErrorKind.unavailable]) here means the server has
+  /// it switched off (GEMINI_ENABLED=false); the UI then offers manual entry.
   Future<List<Object?>> parseEntry(String text, {String? prefillExercise}) => _call(
         () => _dio.post<Object?>('/parse-entry', data: {'text': text, 'prefill_exercise': prefillExercise}),
         (d) => asList(d, 'parsed items'),
@@ -128,9 +129,18 @@ class MrFitApi {
       );
 
   /// Idempotent: returns the stored card unless [forceRegenerate].
-  Future<CoachingCard> coaching(String setId, {String? athleteNote, bool forceRegenerate = false}) => _call(
+  Future<CoachingCard> coaching(String setId, {String? athleteNote, bool forceRegenerate = false}) async =>
+      CoachingCard.fromJson(await coachingRaw(setId, athleteNote: athleteNote, forceRegenerate: forceRegenerate));
+
+  /// Same as [coaching] but returns the validated card JSON (cached as-is in the local DB).
+  Future<Map<String, Object?>> coachingRaw(String setId, {String? athleteNote, bool forceRegenerate = false}) =>
+      _call(
         () => _dio.post<Object?>('/sets/$setId/coaching',
             data: {'athlete_note': athleteNote, 'force_regenerate': forceRegenerate}),
-        CoachingCard.fromJson,
+        (d) {
+          final m = asMap(d, 'coaching card');
+          CoachingCard.fromJson(m); // reject malformed cards before caching them
+          return m;
+        },
       );
 }

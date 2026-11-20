@@ -150,10 +150,12 @@ void main() {
       expect(e.message, 'reps: Value error, Sets/reps must be positive');
     });
 
-    test('503 from the optional parser is reported as disabled', () async {
+    test('503 is "unavailable" with the server detail, and retryable', () async {
       http.reply('POST', '/parse-entry', 503, {'detail': 'Natural-language parsing is disabled on this server'});
-      await expectLater(api.parseEntry('3x5 squat 100kg'),
-          throwsA(isA<ApiException>().having((e) => e.kind, 'kind', ApiErrorKind.disabled)));
+      final e = await api.parseEntry('3x5 squat 100kg').then<ApiException?>((_) => null, onError: (Object e) => e as ApiException);
+      expect(e!.kind, ApiErrorKind.unavailable);
+      expect(e.message, startsWith('Natural-language parsing is disabled'));
+      expect(e.isTransient, isTrue);
     });
 
     test('POST /sets distinguishes created (201) from an idempotent replay (200)', () async {

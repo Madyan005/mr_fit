@@ -48,9 +48,13 @@
         android:label="MR-Fit"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
         android:usesCleartextTraffic="true">
         <!-- usesCleartextTraffic: the v1 deployment is plain HTTP on a trusted LAN (D-014).
-             Remove once the backend sits behind TLS. -->
+             Remove once the backend sits behind TLS.
+             allowBackup=false: the SQLCipher DB and the secure-storage tokens are useless
+             without this device's Keystore key, and unsynced sets must not leave the
+             phone through cloud backup (docs/DECISIONS.md D-064). -->
 
         <activity
             android:name=".MainActivity"
