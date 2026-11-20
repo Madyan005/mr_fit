@@ -44,6 +44,17 @@ int _int(Object? v, String k) {
 
 String _str(Object? v, String k) => v is String ? v : throw ContractError('$k: expected string');
 
+/// Closed-vocabulary field: any unknown value is a contract violation (ContractError),
+/// not a bare FormatException from the enum's `fromWire`.
+T _enum<T>(T Function(String) fromWire, Object? v, String k) {
+  final s = _str(v, k);
+  try {
+    return fromWire(s);
+  } on FormatException catch (e) {
+    throw ContractError('$k: ${e.message}');
+  }
+}
+
 DateTime? _dateOrNull(Object? v, String k) {
   if (v == null) return null;
   final d = DateTime.tryParse(_str(v, k));
@@ -75,7 +86,7 @@ final class RepMetrics {
       repIndex: _int(m['rep_index'], 'rep_index'),
       peakDepthDeg: _numOrNull(m['peak_depth_deg'], 'peak_depth_deg'),
       meanVelocityMS: _numOrNull(m['mean_velocity_m_s'], 'mean_velocity_m_s'),
-      faultFlags: [for (final f in flags) FaultFlag.fromWire(_str(f, 'fault_flags[]'))],
+      faultFlags: [for (final f in flags) _enum(FaultFlag.fromWire, f, 'fault_flags[]')],
     );
   }
 
@@ -211,8 +222,8 @@ final class SetSummaryPayload {
     final p = SetSummaryPayload(
       schemaVersion: version,
       setId: _str(m['set_id'], 'set_id'),
-      exercise: Exercise.fromWire(_str(m['exercise'], 'exercise')),
-      goal: Goal.fromWire(_str(m['goal'], 'goal')),
+      exercise: _enum(Exercise.fromWire, m['exercise'], 'exercise'),
+      goal: _enum(Goal.fromWire, m['goal'], 'goal'),
       vlCapPct: _num(m['vl_cap_pct'], 'vl_cap_pct'),
       setIndex: _int(m['set_index'], 'set_index'),
       repsCompleted: _int(m['reps_completed'], 'reps_completed'),
@@ -224,14 +235,14 @@ final class SetSummaryPayload {
       vlCapExceeded: exceeded,
       velocitySource: m['velocity_source'] == null
           ? null
-          : VelocitySource.fromWire(_str(m['velocity_source'], 'velocity_source')),
+          : _enum(VelocitySource.fromWire, m['velocity_source'], 'velocity_source'),
       mqsScore: _numOrNull(m['mqs_score'], 'mqs_score'),
       mqsBreakdown: breakdown == null
           ? null
           : {for (final e in _obj(breakdown, 'mqs_breakdown').entries) e.key: _numOrNull(e.value, e.key)},
       symmetryIndex: _numOrNull(m['symmetry_index'], 'symmetry_index'),
       faultCounts: FaultCounts.fromJson(m['fault_counts']),
-      dataSource: DataSource.fromWire(_str(m['data_source'], 'data_source')),
+      dataSource: _enum(DataSource.fromWire, m['data_source'], 'data_source'),
       deviceLabels: [for (final l in labels) _str(l, 'device_labels[]')],
       startedAt: _dateOrNull(m['started_at'], 'started_at'),
       endedAt: _dateOrNull(m['ended_at'], 'ended_at'),
