@@ -1,0 +1,46 @@
+name: mr_fit
+description: MR-Fit 2.0 - velocity-based strength training (Android prototype).
+publish_to: none
+version: 2.0.0+1
+
+environment:
+  # speech_to_text 7.5 / camera 0.12 / flutter_foreground_task 11 need Flutter >= 3.44 (Dart 3.12).
+  sdk: ^3.12.0
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.5.0
+  dio: ^5.11.1
+  flutter_secure_storage: ^11.2.0
+  drift: ^2.35.4
+  sqlite3: ^3.9.1          # SQLCipher build selected via hooks.user_defines below
+  path_provider: ^2.1.6
+  path: ^1.9.1
+  fl_chart: ^1.3.1
+  speech_to_text: ^7.5.0
+  flutter_tts: ^4.2.5
+  camera: ^0.12.2
+  flutter_foreground_task: ^11.0.3
+  vibration: ^3.2.1
+  uuid: ^4.6.0
+  permission_handler: ^13.0.2
+  collection: ^1.19.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.35.3
+  build_runner: ^2.17.1
+
+# Encrypted local DB: package:sqlite3 3.x bundles SQLCipher when selected here
+# (replaces the end-of-life sqlcipher_flutter_libs package). See docs/DECISIONS.md D-044.
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlcipher
+
+flutter:
+  uses-material-design: true

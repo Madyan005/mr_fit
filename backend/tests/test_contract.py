@@ -50,6 +50,16 @@ def test_library_matches_v1():
     assert len(lib["exercises"]) == 26 and lib["muscles"] == ["Chest", "Back", "Shoulders", "Legs", "Arms", "Core"]
 
 
+DART_CHANNELS = REPO / "mobile" / "lib" / "domain" / "sensors" / "channels.dart"
+
+
+@pytest.mark.skipif(not DART_CHANNELS.exists(), reason="Dart registry arrives in step 5")
+def test_dart_channel_registry_matches_json():
+    dart = DART_CHANNELS.read_text(encoding="utf-8")
+    declared = set(re.findall(r"static const \w+ = '([a-z0-9_]+)';", dart))
+    assert declared == set(channel_names())
+
+
 @pytest.mark.skipif(not DART_PAYLOAD.exists(), reason="Dart mirror arrives in step 5")
 def test_dart_payload_field_names_match_schema():
     """Text-level check (no Dart SDK needed): every JSON key in the schema appears as a

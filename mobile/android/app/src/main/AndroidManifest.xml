@@ -1,0 +1,85 @@
+<!--
+  MR-Fit 2.0 manifest. Committed on purpose; `flutter create` (see mobile/README.md)
+  generates the rest of the Android scaffold and does not overwrite this file.
+  Permission rationale: docs/ANDROID_PERMISSIONS.md
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Backend API (self-hosted on the LAN) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Live HUD / pose preview -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Voice notes (speech_to_text) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Haptic cues -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Keep streaming through rest intervals (flutter_foreground_task) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <!-- Mock mode uses dataSync: connectedDevice requires a granted BLUETOOTH_CONNECT (Android 14+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Real BLE sensor slot only (unused while MockSensorSource is bound) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+
+    <queries>
+        <!-- speech_to_text needs to see the recognition service -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <!-- flutter_tts -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
+    <application
+        android:label="MR-Fit"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+        <!-- usesCleartextTraffic: the v1 deployment is plain HTTP on a trusted LAN (D-014).
+             Remove once the backend sits behind TLS. -->
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- flutter_foreground_task service: keeps sensor streaming + set persistence alive
+             during rest intervals (Phase 6/7). The type is chosen at start time:
+             dataSync (mock mode), connectedDevice (real external sensor), camera (pose). -->
+        <service
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
+            android:foregroundServiceType="dataSync|connectedDevice|camera"
+            android:exported="false" />
+
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+</manifest>
