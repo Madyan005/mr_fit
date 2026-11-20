@@ -2,18 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../presentation/auth/auth_screen.dart';
+import '../presentation/coach/coach_screen.dart';
 import '../presentation/library/library_screen.dart';
 import '../presentation/shell/home_shell.dart';
 import '../presentation/stats/stats_screen.dart';
 import '../presentation/track/track_screen.dart';
 import 'session.dart';
 
-/// Tabs of the signed-in app. Each ported screen replaces its placeholder in step 5c.
+/// Tabs of the signed-in app: the four ported v1 screens (step 5c).
 List<ShellPage> appPages() => [
       ShellPage('Track', Icons.today_outlined, () => const TrackScreen()),
       ShellPage('Library', Icons.fitness_center, () => const LibraryScreen()),
       ShellPage('Stats', Icons.insights_outlined, () => const StatsScreen()),
-      ShellPage('Coach', Icons.sports_outlined, () => const _ComingSoon('Coach')),
+      ShellPage('Coach', Icons.sports_outlined, () => const CoachScreen()),
     ];
 
 class MrFitApp extends ConsumerWidget {
@@ -35,10 +36,3 @@ class MrFitApp extends ConsumerWidget {
   }
 }
 
-class _ComingSoon extends StatelessWidget {
-  const _ComingSoon(this.name);
-  final String name;
-
-  @override
-  Widget build(BuildContext context) => Center(child: Text('$name screen'));
-}
