@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../app/providers.dart';
 import '../../app/session.dart';
+import '../settings/settings_page.dart';
 import '../widgets/simulated_banner.dart';
 
 /// One tab of the home shell. Pages are registered in [HomeShell.pages].
@@ -71,6 +72,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                 child: Badge(label: Text('$pending'), child: const Icon(Icons.cloud_upload_outlined)),
               ),
             ),
+          IconButton(
+            key: const Key('shell.settings'),
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SettingsPage())),
+          ),
           IconButton(
             key: const Key('shell.signout'),
             tooltip: 'Sign out',
