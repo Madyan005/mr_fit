@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../presentation/auth/auth_screen.dart';
+import '../presentation/library/library_screen.dart';
 import '../presentation/shell/home_shell.dart';
 import '../presentation/track/track_screen.dart';
 import 'session.dart';
@@ -9,7 +10,7 @@ import 'session.dart';
 /// Tabs of the signed-in app. Each ported screen replaces its placeholder in step 5c.
 List<ShellPage> appPages() => [
       ShellPage('Track', Icons.today_outlined, () => const TrackScreen()),
-      ShellPage('Library', Icons.fitness_center, () => const _ComingSoon('Library')),
+      ShellPage('Library', Icons.fitness_center, () => const LibraryScreen()),
       ShellPage('Stats', Icons.insights_outlined, () => const _ComingSoon('Stats')),
       ShellPage('Coach', Icons.sports_outlined, () => const _ComingSoon('Coach')),
     ];
