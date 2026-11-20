@@ -1,17 +1,21 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mr_fit/app/bindings.dart';
-import 'package:mr_fit/main.dart';
+
+import 'support/app_harness.dart';
 
 void main() {
   testWidgets('app starts in mock mode and shows the SIMULATED banner', (tester) async {
-    await tester.pumpWidget(ProviderScope(overrides: sourceOverrides(SourceMode.mock), child: const MrFitApp()));
+    final h = AppHarness();
+    await h.pump(tester);
     expect(find.text('SIMULATED'), findsOneWidget);
-    expect(find.text('MR-Fit 2.0'), findsOneWidget);
+    expect(find.text('MR-Fit'), findsOneWidget);
+    await h.dispose(tester);
   });
 
   testWidgets('no banner when every binding is real', (tester) async {
-    await tester.pumpWidget(ProviderScope(overrides: sourceOverrides(SourceMode.real), child: const MrFitApp()));
+    final h = AppHarness(mode: SourceMode.real);
+    await h.pump(tester);
     expect(find.text('SIMULATED'), findsNothing);
+    await h.dispose(tester);
   });
 }
