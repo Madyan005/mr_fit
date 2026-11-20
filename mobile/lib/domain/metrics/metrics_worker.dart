@@ -67,11 +67,11 @@ class MetricsWorker {
     final ready = Completer<SendPort>();
     fromWorker.listen((m) {
       switch (m) {
-        case SendPort p:
+        case final SendPort p:
           ready.complete(p);
-        case LiveMetrics l:
+        case final LiveMetrics l:
           liveCtl.add(l);
-        case EngineEvent e:
+        case final EngineEvent e:
           eventCtl.add(e);
       }
     });
