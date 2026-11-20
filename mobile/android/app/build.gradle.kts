@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "com.mrfit.mr_fit"
-    compileSdk = flutter.compileSdkVersion
+    // MR-Fit: 37 because permission_handler_android 13.x compiles against SDK 37 (Flutter 3.50's
+    // default is 36). compileSdk only sets the APIs visible at compile time; targetSdk stays the
+    // Flutter default and minSdk stays 26 (docs/DECISIONS.md D-056).
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
