@@ -1,0 +1,160 @@
+# MR-Fit 2.0 backend stack.
+#
+#   cp .env.example .env      # then fill SECRET_KEY and POSTGRES_PASSWORD
+#   docker compose up         # profiles come from COMPOSE_PROFILES in .env (default: gpu)
+#
+# Profiles:
+#   gpu   -> ollama (NVIDIA GPU reservation) + one-shot model pull
+#   cpu   -> ollama-cpu (no GPU) + one-shot model pull      [no-GPU dev]
+#   tools -> pgadmin
+#   (none) + LLM_BACKEND=fake -> no Ollama at all             [fastest dev]
+#
+# Requires Docker Compose v2.20+ (uses `depends_on.required: false`).
+
+name: mrfit
+
+x-ollama-base: &ollama-base
+  image: ollama/ollama:${OLLAMA_IMAGE_TAG:-0.40.15}
+  environment:
+    # 4 GB VRAM (GTX 1050 Ti): never hold more than one model, never run requests in parallel.
+    OLLAMA_MAX_LOADED_MODELS: "1"
+    OLLAMA_NUM_PARALLEL: "1"
+    OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-0}
+  volumes:
+    - ollama_models:/root/.ollama
+  healthcheck:
+    test: ["CMD", "ollama", "list"]
+    interval: 10s
+    timeout: 5s
+    retries: 12
+    start_period: 10s
+  restart: unless-stopped
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:${TIMESCALEDB_IMAGE_TAG:-2.31.0-pg17}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mrfit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (see .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:-mrfit}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Bound to localhost only: the phone talks to the API, never to the DB.
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      args:
+        INSTALL_GEMINI: ${GEMINI_ENABLED:-false}
+    image: mrfit-api:dev
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env (see .env.example)}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-30}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      AI_COOLDOWN_SECONDS: ${AI_COOLDOWN_SECONDS:-10}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mrfit}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-mrfit}
+      TS_COMPRESS_AFTER_DAYS: ${TS_COMPRESS_AFTER_DAYS:-7}
+      TS_SENSOR_RETENTION_DAYS: ${TS_SENSOR_RETENTION_DAYS:-90}
+      TS_SKELETON_RETENTION_DAYS: ${TS_SKELETON_RETENTION_DAYS:-30}
+      MAX_TIMESERIES_BATCH: ${MAX_TIMESERIES_BATCH:-5000}
+      MAX_SKELETON_BATCH: ${MAX_SKELETON_BATCH:-1000}
+      LLM_BACKEND: ${LLM_BACKEND:-ollama}
+      # Both ollama services answer on the network alias "ollama".
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-deepseek-r1:1.5b}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-0}
+      OLLAMA_TIMEOUT_SECONDS: ${OLLAMA_TIMEOUT_SECONDS:-120}
+      GEMINI_ENABLED: ${GEMINI_ENABLED:-false}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+    ports:
+      - "${API_HOST_BIND:-0.0.0.0}:${API_HOST_PORT:-8000}:8000"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      # Ollama is optional (profile-dependent). With LLM_BACKEND=fake, or when Ollama
+      # is down, the coach falls back to its deterministic template.
+      ollama:
+        condition: service_healthy
+        required: false
+      ollama-cpu:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  ollama:
+    <<: *ollama-base
+    profiles: ["gpu"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      default:
+        aliases: [ollama]
+
+  ollama-cpu:
+    <<: *ollama-base
+    profiles: ["cpu"]
+    networks:
+      default:
+        aliases: [ollama]
+
+  # One-shot: pulls the (only allowed) model into the shared volume, then exits.
+  ollama-pull:
+    image: ollama/ollama:${OLLAMA_IMAGE_TAG:-0.40.15}
+    profiles: ["gpu", "cpu"]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama"]
+    command: ["pull", "${OLLAMA_MODEL:-deepseek-r1:1.5b}"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+        required: false
+      ollama-cpu:
+        condition: service_healthy
+        required: false
+    restart: "no"
+
+  pgadmin:
+    image: dpage/pgadmin4:${PGADMIN_IMAGE_TAG:-9.18}
+    profiles: ["tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-}
+    ports:
+      - "127.0.0.1:5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  ollama_models:
+  pgadmin_data:
+
+networks:
+  default:

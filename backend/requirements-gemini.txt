@@ -1,0 +1,3 @@
+# OPTIONAL: only installed when GEMINI_ENABLED=true (Docker build arg INSTALL_GEMINI).
+# Used solely by app/services/gemini_optional (natural-language log parsing).
+google-genai==3.6.1   # (v1)

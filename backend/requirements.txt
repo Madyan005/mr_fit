@@ -1,0 +1,15 @@
+# MR-Fit 2.0 API runtime dependencies (Python 3.14).
+# Pins marked (v1) are the versions the v1 app ran with on the dev machine;
+# the rest are the latest PyPI releases as of 2026-11-20.
+fastapi==0.165.0            # (v1)
+starlette==1.10.0           # (v1) pinned transitively via fastapi
+uvicorn[standard]==0.54.0   # (v1)
+pydantic==2.14.1            # (v1)
+pydantic-settings==2.16.3
+SQLAlchemy==2.1.9           # (v1)
+alembic==1.20.1
+psycopg[binary]==3.3.9      # PostgreSQL driver (sync), used as postgresql+psycopg://
+bcrypt==5.0.0               # (v1)
+PyJWT==2.15.1               # replaces python-jose (see docs/DECISIONS.md D-011)
+python-multipart==0.0.34    # (v1) needed by OAuth2 form parsing
+httpx==0.28.1               # (v1) Ollama HTTP client
