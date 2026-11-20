@@ -20,12 +20,11 @@ const _g = 9.81;
 class MockSensorSource implements SensorSource {
   MockSensorSource({
     required this.world,
-    TimeSync? timeSync,
+    this.timeSync,
     Set<String>? channels,
     this.sampleRateHz = 100,
     this.onHaptic,
-  })  : _timeSync = timeSync,
-        _channels = channels ?? defaultChannels,
+  })  : _channels = channels ?? defaultChannels,
         _rng = SeededRandom(world.scenario.seed);
 
   /// Everything a bar-mounted IMU could offer. Drop entries to simulate weaker sources
@@ -36,7 +35,7 @@ class MockSensorSource implements SensorSource {
   };
 
   final MockWorld world;
-  final TimeSync? _timeSync;
+  final TimeSync? timeSync;
   final Set<String> _channels;
   final double sampleRateHz;
   final void Function(HapticCommand)? onHaptic;
@@ -120,7 +119,7 @@ class MockSensorSource implements SensorSource {
         sourceLabel: '$sourceName (SIMULATED)',
         batteryPct: _batteryAt(tPhone),
         rssi: -55,
-        calibrated: _timeSync?.isCalibrated ?? false,
+        calibrated: timeSync?.isCalibrated ?? false,
         restingDwell: world.isRacked(tPhone),
       );
 
@@ -136,7 +135,7 @@ class MockSensorSource implements SensorSource {
     final m = world.motionAt(tPhone);
     final tap = _consumeTap(tPhone);
     final sensorNs = tPhone + _clockOffsetNs;
-    final stamp = _timeSync?.toPhoneMonoNs(sensorNs) ?? sensorNs;
+    final stamp = timeSync?.toPhoneMonoNs(sensorNs) ?? sensorNs;
     final out = <SensorSample>[];
     void add(String ch, double v) {
       if (_channels.contains(ch)) out.add(SensorSample(channel: ch, value: v, tMonoNs: stamp, source: sourceName));
