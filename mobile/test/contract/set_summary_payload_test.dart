@@ -62,7 +62,7 @@ void main() {
 
   test('channel registry equals contracts/channels.v1.json', () {
     final reg = jsonDecode(File('../contracts/channels.v1.json').readAsStringSync()) as Map<String, Object?>;
-    final names = [for (final c in reg['channels'] as List) (c as Map)['name'] as String].toSet();
+    final names = {for (final c in reg['channels'] as List) (c as Map)['name'] as String};
     expect(Channels.all, names);
   });
 }
