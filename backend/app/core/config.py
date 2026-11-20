@@ -28,13 +28,29 @@ _INSECURE_SECRETS = {"DEV_SECRET_ONLY_CHANGE_ME", "changeme", "change-me", "secr
 MIN_SECRET_LEN = 32
 
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=_REPO_ROOT_ENV,
-        env_file_encoding="utf-8",
-        extra="ignore",
-        case_sensitive=False,
-    )
+_MODEL_CONFIG = SettingsConfigDict(
+    env_file=_REPO_ROOT_ENV,
+    env_file_encoding="utf-8",
+    extra="ignore",
+    case_sensitive=False,
+)
+
+
+class DatabaseSettings(BaseSettings):
+    """Subset needed by Alembic and scripts (no SECRET_KEY required)."""
+
+    model_config = _MODEL_CONFIG
+
+    database_url: str  # REQUIRED, no default (contains a password)
+    ts_compress_after_days: int = Field(default=7, ge=1)
+    ts_sensor_retention_days: int = Field(default=90, ge=1)
+    ts_skeleton_retention_days: int = Field(default=30, ge=1)
+    max_timeseries_batch: int = Field(default=5000, ge=1, le=50_000)
+    max_skeleton_batch: int = Field(default=1000, ge=1, le=10_000)
+
+
+class Settings(DatabaseSettings):
+    model_config = _MODEL_CONFIG
 
     app_env: Literal["dev", "test", "prod"] = "dev"
 
@@ -46,14 +62,6 @@ class Settings(BaseSettings):
     # ---- http ----
     cors_origins: str = ""  # comma-separated allowlist; empty = CORS disabled
     ai_cooldown_seconds: int = Field(default=10, ge=0)
-
-    # ---- database ----
-    database_url: str  # REQUIRED, no default (contains a password)
-    ts_compress_after_days: int = Field(default=7, ge=1)
-    ts_sensor_retention_days: int = Field(default=90, ge=1)
-    ts_skeleton_retention_days: int = Field(default=30, ge=1)
-    max_timeseries_batch: int = Field(default=5000, ge=1, le=50_000)
-    max_skeleton_batch: int = Field(default=1000, ge=1, le=10_000)
 
     # ---- coach LLM ----
     llm_backend: Literal["ollama", "fake"] = "ollama"
@@ -112,3 +120,8 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()  # type: ignore[call-arg]  # required fields come from env
+
+
+@lru_cache
+def get_db_settings() -> DatabaseSettings:
+    return DatabaseSettings()  # type: ignore[call-arg]

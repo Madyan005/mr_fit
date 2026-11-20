@@ -35,6 +35,26 @@ docker compose up
 
 API: `http://<host-LAN-IP>:8000` (health: `/health`). From the Android emulator use `http://10.0.2.2:8000`.
 
+## Database
+
+Migrations run automatically when the `api` container starts (`alembic upgrade head`,
+then compression/retention policies are re-synced from `TS_*` env vars).
+
+| Table | Kind |
+|---|---|
+| `users`, `logs` | v1 tables, migrated (`users.id` stays INTEGER) |
+| `refresh_tokens`, `custom_exercises` | auth + per-user exercise library |
+| `biomechanical_sets`, `athlete_baselines` | set summaries (MQS, velocity loss, faults, coaching JSON, `data_source`) |
+| `sensor_timeseries`, `skeleton_frames` | TimescaleDB hypertables (generic channels; compressed after 7 d; kept 90 d / 30 d) |
+| `meals`, `food_items`, `nutrition_reference` | optional food feature |
+
+Import v1 data (optional, manual):
+
+```bash
+cd backend
+python -m scripts.import_sqlite --sqlite ../mrfit.db --dry-run   # then without --dry-run
+```
+
 ## Backend tests (no Docker, GPU, or Ollama needed)
 
 ```bash
