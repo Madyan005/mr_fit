@@ -3,10 +3,11 @@
 library;
 
 import '../../../core/clock.dart';
+import '../../../domain/session/session_ports.dart';
 import 'scenario_timeline.dart';
 import 'scenarios.dart';
 
-class MockWorld {
+class MockWorld implements SimulationHooks {
   MockWorld({required this.scenario, MonotonicClock? clock})
       : clock = clock ?? StopwatchClock(),
         timeline = ScenarioTimeline(scenario);
@@ -18,8 +19,11 @@ class MockWorld {
   int? setStartNs; // phone clock
   int? positioningStartNs;
 
+  @override
   void startSet([int? nowNs]) => setStartNs = nowNs ?? clock.nowNs();
+  @override
   void startPositioning([int? nowNs]) => positioningStartNs = nowNs ?? clock.nowNs();
+  @override
   void reset() {
     setStartNs = null;
     positioningStartNs = null;

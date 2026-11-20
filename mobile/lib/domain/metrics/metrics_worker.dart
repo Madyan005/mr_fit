@@ -12,6 +12,7 @@ import '../vision/vision_models.dart';
 import 'live_metrics.dart';
 import 'metrics_config.dart';
 import 'metrics_engine.dart';
+import 'metrics_session.dart';
 
 sealed class _Msg {
   const _Msg();
@@ -48,7 +49,7 @@ final class _Init {
   final SendPort out;
 }
 
-class MetricsWorker {
+class MetricsWorker implements LiveMetricsSession {
   MetricsWorker._(this._isolate, this._toWorker, this._fromWorker, this.live, this.events);
 
   final Isolate _isolate;
@@ -56,7 +57,9 @@ class MetricsWorker {
   final ReceivePort _fromWorker;
 
   /// Throttled HUD state (~60 Hz).
+  @override
   final Stream<LiveMetrics> live;
+  @override
   final Stream<EngineEvent> events;
 
   static Future<MetricsWorker> start(SetContext ctx, SensorCapabilities caps,
@@ -80,10 +83,14 @@ class MetricsWorker {
     return MetricsWorker._(iso, await ready.future, fromWorker, liveCtl.stream, eventCtl.stream);
   }
 
+  @override
   void addSamples(List<SensorSample> batch) => _toWorker.send(_Samples(batch));
+  @override
   void addFrames(List<VisionFrameResult> batch) => _toWorker.send(_Frames(batch));
+  @override
   void updateStatus(DeviceStatus s, int tMonoNs) => _toWorker.send(_Status(s, tMonoNs));
 
+  @override
   Future<SetSummaryPayload> finish({DateTime? startedAt, DateTime? endedAt}) async {
     final reply = ReceivePort();
     _toWorker.send(_Finish(reply.sendPort, startedAt, endedAt));
@@ -93,6 +100,7 @@ class MetricsWorker {
     throw StateError('MetricsWorker.finish failed: $result');
   }
 
+  @override
   void dispose() {
     _fromWorker.close();
     _isolate.kill(priority: Isolate.immediate);

@@ -11,13 +11,14 @@ import '../../../core/seeded_random.dart';
 import '../../../domain/sensors/channels.dart';
 import '../../../domain/sensors/sensor_models.dart';
 import '../../../domain/sensors/sensor_source.dart';
+import '../../../domain/session/session_ports.dart';
 import '../../../domain/timesync/time_sync.dart';
 import 'mock_world.dart';
 import 'scenarios.dart';
 
 const _g = 9.81;
 
-class MockSensorSource implements SensorSource {
+class MockSensorSource implements SensorSource, TapSimulator {
   MockSensorSource({
     required this.world,
     this.timeSync,
@@ -90,6 +91,7 @@ class MockSensorSource implements SensorSource {
   }
 
   /// Phase 4: the athlete taps the bar; the mock sensor "feels" it at the same instant.
+  @override
   void simulateTap(int phoneMonoNs) => _pendingTapsPhoneNs.add(phoneMonoNs);
 
   Future<void> dispose() async {
