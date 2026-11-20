@@ -6,6 +6,8 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Riverpod 3.x moved `Override` (and other rarely used types) to misc.dart.
+import 'package:flutter_riverpod/misc.dart' show Override;
 
 import '../data/sensors/mock/mock_sensor_source.dart';
 import '../data/sensors/mock/mock_world.dart';
