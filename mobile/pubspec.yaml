@@ -4,13 +4,17 @@ publish_to: none
 version: 2.0.0+1
 
 environment:
-  # speech_to_text 7.5 / camera 0.12 / flutter_foreground_task 11 need Flutter >= 3.44 (Dart 3.12).
-  sdk: ^3.12.0
-  flutter: ">=3.44.0"
+  # speech_to_text 7.5 / camera 0.12 / flutter_foreground_task 11 need Flutter >= 3.44 (Dart 3.12);
+  # material_ui 1.11 (Material moved out of the SDK in Flutter 3.47) needs Flutter >= 3.47 / Dart 3.13.
+  # Verified on Flutter 3.50.1 / Dart 3.14.0.
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  # package:flutter/material.dart is deprecated since Flutter 3.47 in favour of this official package.
+  material_ui: ^1.11.1
   flutter_riverpod: ^3.5.0
   dio: ^5.11.1
   flutter_secure_storage: ^11.2.0
