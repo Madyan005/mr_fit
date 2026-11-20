@@ -8,6 +8,10 @@ DATA_SOURCES: tuple[str, ...] = ("simulated", "real")
 COACHING_SOURCES: tuple[str, ...] = ("llm", "fallback", "guardrail")
 LOG_TYPES: tuple[str, ...] = ("EXERCISE", "NUTRITION")
 MEAL_SOURCES: tuple[str, ...] = ("manual", "gemini_text", "vision")
+FAULT_FLAGS: tuple[str, ...] = ("valgus", "lumbar_flexion", "incomplete_rom")
+VELOCITY_SOURCES: tuple[str, ...] = ("imu", "vision", "fused")
+# Velocity-loss caps by goal (ROLE_BRIEFING: Max Strength 20 %, Hypertrophy 30 %).
+GOAL_VL_CAP_PCT: dict[str, float] = {"max_strength": 20.0, "hypertrophy": 30.0}
 
 
 def sql_in(column: str, values: tuple[str, ...]) -> str:

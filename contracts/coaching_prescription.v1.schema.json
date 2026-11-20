@@ -1,0 +1,71 @@
+{
+  "$defs": {
+    "Cue": {
+      "additionalProperties": false,
+      "properties": {
+        "metric_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "key of a metric in the set summary, or null",
+          "title": "Metric Ref"
+        },
+        "text": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "metric_ref"
+      ],
+      "title": "Cue",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cues": {
+      "items": {
+        "$ref": "#/$defs/Cue"
+      },
+      "maxItems": 3,
+      "minItems": 1,
+      "title": "Cues",
+      "type": "array"
+    },
+    "focus_metric": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "key of the single most important metric, or null",
+      "title": "Focus Metric"
+    },
+    "summary": {
+      "maxLength": 300,
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    }
+  },
+  "required": [
+    "summary",
+    "focus_metric",
+    "cues"
+  ],
+  "title": "CoachingPrescription",
+  "type": "object"
+}

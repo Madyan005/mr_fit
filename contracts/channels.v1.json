@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Single registry of SensorSample channel names. Source-agnostic: any SensorSource (mock, IMU clip, smartwatch, phone) declares which of these it offers via SensorCapabilities. Unknown channel names are rejected by the API.",
+  "channels": [
+    {"name": "accel_x", "unit": "m/s^2", "description": "Linear acceleration, device X axis"},
+    {"name": "accel_y", "unit": "m/s^2", "description": "Linear acceleration, device Y axis"},
+    {"name": "accel_z", "unit": "m/s^2", "description": "Linear acceleration, device Z axis"},
+    {"name": "gyro_x", "unit": "rad/s", "description": "Angular velocity, device X axis"},
+    {"name": "gyro_y", "unit": "rad/s", "description": "Angular velocity, device Y axis"},
+    {"name": "gyro_z", "unit": "rad/s", "description": "Angular velocity, device Z axis"},
+    {"name": "bar_vel_z", "unit": "m/s", "description": "Vertical bar/body velocity (sensor-derived)"},
+    {"name": "bar_accel_z", "unit": "m/s^2", "description": "Vertical bar/body acceleration, gravity removed"},
+    {"name": "bar_tilt_roll", "unit": "deg", "description": "Bar roll angle (left/right tilt)"},
+    {"name": "vision_vel_z", "unit": "m/s", "description": "Vertical velocity estimated from pose keypoints (lower confidence than IMU)"},
+    {"name": "heart_rate_bpm", "unit": "bpm", "description": "Heart rate (e.g. smartwatch)"},
+    {"name": "battery_pct", "unit": "%", "description": "Sensor battery level"}
+  ]
+}

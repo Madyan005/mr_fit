@@ -4,3 +4,7 @@ Dockerfile text eol=lf
 *.py text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+# Contracts are compared byte-for-byte by tests and read by both Python and Dart.
+*.json text eol=lf
+*.dart text eol=lf
+*.ini text eol=lf

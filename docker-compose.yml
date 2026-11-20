@@ -51,7 +51,9 @@ services:
 
   api:
     build:
-      context: ./backend
+      # Repo root, so the image can include contracts/ (shared with the Flutter app).
+      context: .
+      dockerfile: backend/Dockerfile
       args:
         INSTALL_GEMINI: ${GEMINI_ENABLED:-false}
     image: mrfit-api:dev

@@ -1,0 +1,13 @@
+# Used by BuildKit for backend/Dockerfile (context = repo root). Allow-list style.
+*
+!backend/
+!contracts/
+backend/tests/
+backend/.venv/
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/*.db
+**/*.env
+**/.env
+**/.env.*

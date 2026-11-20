@@ -1,0 +1,194 @@
+{
+  "$defs": {
+    "CardCue": {
+      "properties": {
+        "metric_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Metric Ref"
+        },
+        "metric_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Metric Value"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "metric_ref",
+        "metric_value"
+      ],
+      "title": "CardCue",
+      "type": "object"
+    },
+    "NextSetPrescription": {
+      "properties": {
+        "action": {
+          "enum": [
+            "continue",
+            "increase_load",
+            "reduce_load",
+            "stop_exercise"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "load_change_pct": {
+          "title": "Load Change Pct",
+          "type": "number"
+        },
+        "rest_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Rest Seconds"
+        },
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "rest_seconds",
+        "load_change_pct",
+        "rule_id"
+      ],
+      "title": "NextSetPrescription",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "cues": {
+      "items": {
+        "$ref": "#/$defs/CardCue"
+      },
+      "title": "Cues",
+      "type": "array"
+    },
+    "fallback_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Fallback Reason"
+    },
+    "focus_metric": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Focus Metric"
+    },
+    "focus_value": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Focus Value"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "medical_notice": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Medical Notice"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model"
+    },
+    "next_set": {
+      "$ref": "#/$defs/NextSetPrescription"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "set_id": {
+      "format": "uuid",
+      "title": "Set Id",
+      "type": "string"
+    },
+    "source": {
+      "enum": [
+        "llm",
+        "fallback",
+        "guardrail"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "summary": {
+      "title": "Summary",
+      "type": "string"
+    }
+  },
+  "required": [
+    "set_id",
+    "source",
+    "summary",
+    "cues",
+    "focus_metric",
+    "focus_value",
+    "next_set",
+    "generated_at"
+  ],
+  "title": "CoachingCard",
+  "type": "object"
+}

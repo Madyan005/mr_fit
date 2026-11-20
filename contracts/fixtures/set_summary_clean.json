@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "set_id": "0b6f7c1e-8a52-4c1d-9a3e-3f1f0a000001",
+  "exercise": "squat",
+  "goal": "hypertrophy",
+  "vl_cap_pct": 30.0,
+  "set_index": 1,
+  "reps_completed": 5,
+  "load_kg": 80.0,
+  "per_rep": [
+    {"rep_index": 1, "peak_depth_deg": 96.0, "mean_velocity_m_s": 0.62, "fault_flags": []},
+    {"rep_index": 2, "peak_depth_deg": 95.5, "mean_velocity_m_s": 0.6, "fault_flags": []},
+    {"rep_index": 3, "peak_depth_deg": 95.0, "mean_velocity_m_s": 0.59, "fault_flags": []},
+    {"rep_index": 4, "peak_depth_deg": 94.5, "mean_velocity_m_s": 0.57, "fault_flags": []},
+    {"rep_index": 5, "peak_depth_deg": 94.0, "mean_velocity_m_s": 0.55, "fault_flags": []}
+  ],
+  "mpv_initial": 0.62,
+  "mpv_final": 0.55,
+  "velocity_loss_pct": 11.3,
+  "vl_cap_exceeded": false,
+  "velocity_source": "imu",
+  "mqs_score": 88.5,
+  "mqs_breakdown": {"rom": 92.0, "stability": 85.0, "tempo": 88.0},
+  "symmetry_index": 2.1,
+  "fault_counts": {"valgus": 0, "lumbar_flexion": 0, "incomplete_rom": 0},
+  "data_source": "simulated",
+  "device_labels": ["MockSensorSource", "MockVisionPipeline"],
+  "started_at": "2026-11-20T10:00:00Z",
+  "ended_at": "2026-11-20T10:00:21Z"
+}

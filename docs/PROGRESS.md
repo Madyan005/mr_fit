@@ -3,74 +3,109 @@
 Updated after every step. Decisions and assumptions live in [DECISIONS.md](DECISIONS.md).
 Branch: `feat/mr-fit-2`.
 
-## Status: 3 of 7 steps done
+## Status: 4 of 7 steps done
 
 | # | Step | Status | Commit |
 |---|---|---|---|
 | 1 | Read report, inspect repo, plan | ✅ done | — (no repo changes) |
 | 2 | Infrastructure: compose, requirements, Dockerfile, `.env.example`, archive cleanup | ✅ done | `9483e92` (+ `f316de1` v1 path fixes) |
-| 3 | Database: Postgres/Timescale schema + Alembic migration of old tables | ✅ done | see `git log` ("Add Postgres/Timescale schema…") |
-| 4 | Backend: port routes, custom exercises, `/sets`, auth refresh, constrained coach, tests | ⏭ next | |
-| 5 | Flutter: skeleton, domain abstractions + mocks + MetricsEngine, ported screens, 7-phase screens | ⏳ | |
+| 3 | Database: Postgres/Timescale schema + Alembic migration of old tables | ✅ done | `58ebd17` |
+| 4 | Backend: port routes, custom exercises, `/sets`, auth refresh, constrained coach, tests | ✅ done | see `git log` ("Add backend API…") |
+| 5 | Flutter: skeleton, domain abstractions + mocks + MetricsEngine, ported screens, 7-phase screens | ⏭ next | |
 | 6 | Integration + scripted ~7-minute demo runner | ⏳ | |
 | 7 | Final summary: real vs simulated, how to plug in real sensor/vision | ⏳ | |
 
 ## Exact next action
 
-Step 4, first change: port auth to `backend/app/api/auth.py` (signup/login with v1's
-bcrypt(sha256) hashing, PyJWT access tokens, rotating refresh tokens + `POST /auth/refresh`
-with reuse detection), with tests on SQLite.
+Step 5, first change: create the Flutter project skeleton in `mobile/` (Android only,
+Riverpod, clean-architecture folders). Then:
+- domain abstractions (`SensorSource`, `VisionPipeline`, `TimeSync`, `FoodRecognizer`) plus the generic models
+- the Dart `SetSummaryPayload` at `mobile/lib/domain/contracts/set_summary_payload.dart`, which un-skips `backend/tests/test_contract.py::test_dart_payload_field_names_match_schema`
+- the seeded mocks and the MetricsEngine, with golden tests against `contracts/fixtures/`
+
+Step 5 is large, so it will likely span several commits.
 
 ## Open questions / pending decisions
 
 | Item | Default in use | Needed from |
 |---|---|---|
 | ROLE_BRIEFING not in the workspace; 7-phase timings unknown | D-017 placeholder timings (≈7 min) | User: paste briefing if exact timings matter |
-| TimescaleDB 2.31 compression API fallback never run against a real server | D-023 dual-API PL/pgSQL fallback | User: run the opt-in online migration test (below), or allow running portable Postgres in the scratchpad |
-| MQS formula and thresholds | Placeholder to be written in `docs/MQS.md` (step 5), weights in config | Team validation |
+| TimescaleDB 2.31 compression API fallback never run against a real server | D-023 dual-API PL/pgSQL fallback | User: run the opt-in online migration test, or allow running portable Postgres in the scratchpad |
+| Next-set rule thresholds (rest, load changes) | D-036 placeholders | Coach / team validation |
+| Medical guardrail keyword lists (EN + AR) | D-043 conservative lists | Review by a clinician (Arabic-speaking for the AR list) |
+| MQS formula and thresholds | Placeholder `docs/MQS.md` in step 5, weights in config | Team validation |
 | Sensor source / vision task / pose model / transport | Mocks (O-1…O-4) | Hardware decision |
-| Gemini key that was committed in v1 history | Untracked; history not rewritten (D-002) | User rotates the key (confirmed they will) |
+| Gemini key committed in v1 history | Untracked; history not rewritten (D-002) | User rotates the key (confirmed) |
+| Real deepseek-r1:1.5b output quality | Unknown; fallback covers failures | Run with Ollama and log the fallback rate |
 
 ## Verification log
 
-### Step 3 — Database
-Verified (Python 3.14, pinned requirements, SQLite + Alembic offline mode):
-- 43 tests pass, 1 skipped (opt-in online test).
-- ORM constraints on SQLite: CHECK (exercise/goal/data_source/coaching_source/vl_cap/reps/log type), case-insensitive unique custom exercise per user, cascade delete user → sets → timeseries/skeleton/logs, timeseries PK rejects duplicate rows, JSONB round-trip.
-- `alembic upgrade head --sql` renders the full PostgreSQL DDL with no server; tests check it contains every ORM table, column and index, hypertable/compression/retention statements with the configured `TS_*` values, and the UTC conversion of v1 timestamps. A deliberate break (removing a column from 0003) was caught.
-- Single linear Alembic head; non-Postgres dialects refused.
-- `scripts/import_sqlite.py` dry-run on the real local v1 DBs: 9 users / 50 logs and 5 users / 18 logs, all accepted. The scratch target copy was deleted afterwards.
+### Step 4 — Backend
+Verified (Python 3.14, pinned requirements, SQLite, FakeLLMClient, mocked HTTP for Ollama):
+- **165 tests pass, 2 skipped** (the opt-in online Postgres test, and the Dart mirror test that waits for step 5).
+- **Auth.** Signup and login, v1 password hashes still verify, refresh rotation, reuse detection revokes only the affected family, expiry and logout. Forged, expired, wrong-type and refresh-as-bearer tokens are all rejected, and only the SHA-256 of refresh tokens is stored.
+- **Ported routes.** `/logs` CRUD with server-side volume, the v1 validators, per-user isolation, the v1 heatmap session-count rule, `/stats` totals and averages, and the 26-exercise library plus case-insensitive custom exercises per user.
+- **`/sets`.**
+  - Idempotent: 201 on create, 200 on replay, 409 on conflicting content; the mirror log row is not duplicated.
+  - Contract violations get a 422.
+  - Timeseries: duplicates are ignored within and across batches, phone-monotonic time is converted correctly (10 ms steps), and over-size batches get a 413.
+  - Unknown channels (e.g. `esp32_raw_byte`), NaN values and timestamps without a timezone get a 422.
+  - Skeleton batches work.
+- **Coach.**
+  - The guardrail fires on 12 English and 11 Arabic medical phrases and passes 8 normal notes (including «شد ظهر» and «العالم»).
+  - The number checker accepts payload numbers at the precision written (including Arabic-Indic digits and number words) and rejects invented ones.
+  - The `metric_ref` enum is narrowed to the set's own metrics, `<think>` blocks are stripped, and there is exactly one retry before the fallback.
+  - Ollama-down goes straight to the fallback, and the guardrail bypasses the model completely.
+  - The fallback template passes all checks for all three fixtures.
+  - Rules give deterministic results for the three fixtures.
+  - GPU jobs never overlap, the release hook runs even when a job fails, the model is unloaded after each call, coaching is idempotent, and the cooldown never blocks a safety referral.
+- **Ollama client (mocked HTTP).**
+  - The request uses `/api/chat` with `format` = the narrowed `CoachingPrescription` schema, `keep_alive "0"`, `temperature 0` and `stream false`.
+  - The unload goes through `/api/generate` with `keep_alive 0`, and the `message.thinking` field is ignored.
+  - HTTP and transport errors become `LLMError`.
+- **Contracts.**
+  - The committed JSON Schemas match the Pydantic models, and all three fixtures validate and round-trip.
+  - The schema requires every field and forbids extras.
+  - The channel registry contains no hardware names.
+- **Live-server smoke test.** Ran real `uvicorn --factory` with `LLM_BACKEND=fake` and SQLite, then via curl: signup → `POST /sets` (201, replay 200) → coaching (`source: llm`, rule `valgus_repeated`) → a NaN upload returns 422. The server log had no errors.
+- **Bug found and fixed.** FastAPI's default 422 handler crashed with a 500 on `NaN` input (D-040).
 
 Not verified:
-- Migrations against a real PostgreSQL/TimescaleDB server (no Docker; running downloaded portable Postgres binaries was blocked by the permission classifier). To verify:
-  `docker compose up -d timescaledb`, then
-  `MRFIT_TEST_PG_URL=postgresql+psycopg://mrfit:<pw>@127.0.0.1:5432/<scratch_db> pytest -k online`
-  (upgrade → downgrade → upgrade, checks hypertables + compression, compares live schema to ORM).
-- Postgres sequence reset in the import script (PG-only code path).
+- Anything against real PostgreSQL/TimescaleDB (same as step 3): JSONB behaviour, `ON CONFLICT` on hypertables, `SELECT … FOR UPDATE` in refresh rotation.
+- Real Ollama with `deepseek-r1:1.5b` (no Ollama/GPU here): whether the model follows the narrowed schema, how often it writes digits (which triggers the fallback), and latency on a GTX 1050 Ti.
+- Real Gemini calls (module off by default; tested with an injected fake parser only).
+- `docker compose up` with the new repo-root build context.
+
+### Step 3 — Database
+Verified: 43 tests (ORM constraints on SQLite; `alembic upgrade head --sql` DDL checked against the ORM for every table, column and index; Timescale statements use `TS_*` values; a mutation test was caught); `import_sqlite.py` dry-run on the real v1 DBs (9 users / 50 logs, 5 users / 18 logs).
+Not verified: migrations on a real PostgreSQL/TimescaleDB server (running portable Postgres binaries was blocked). To verify:
+`docker compose up -d timescaledb`, then `MRFIT_TEST_PG_URL=postgresql+psycopg://mrfit:<pw>@127.0.0.1:5432/<scratch_db> pytest -k online`.
 
 ### Step 2 — Infrastructure
-Verified: pinned requirements install on Python 3.14 and `pip check` passes; 14 settings/CORS/health tests pass; `uvicorn app.main:create_app --factory` serves `/health` and refuses to start with `OLLAMA_MODEL=qwen3:8b` or no `SECRET_KEY`; all Docker image tags exist on Docker Hub; `deepseek-r1:1.5b` = Q4_K_M (same digest `e0979632db5a`); compose file parses and all service/dependency/volume references resolve.
-
-Not verified: `docker compose up`, image build, GPU passthrough, model pull, Compose `depends_on.required: false` behaviour (needs Compose ≥ 2.20).
+Verified: requirements install on Python 3.14 and `pip check` passes; settings refuse an insecure `SECRET_KEY`, banned or unlisted models and a CORS wildcard; uvicorn factory boots; Docker image tags exist; `deepseek-r1:1.5b` = Q4_K_M digest; compose references resolve.
+Not verified: `docker compose up`, image build, GPU passthrough, model pull.
 
 ### Step 1 — Plan
-Read `mrfit_reverse_engineer.md` and every v1 source file. Report/code mismatches recorded in the step-1 summary (13 routes not 9, `mr_fit.env.md` missing, tracked secret + DB files, unused `/ai-coach`, unverifiable library versions).
+Read `mrfit_reverse_engineer.md` and every v1 source file. Report and code mismatches were recorded (13 routes, not 9; `mr_fit.env.md` missing; tracked secret and DB files; `/ai-coach` unused; library versions unverifiable).
 
 ## Files changed per step
 
+### Step 4
+- **API:** `backend/app/api/{__init__,deps,auth,logs,exercises,sets,parse}.py`
+- **Core:** `backend/app/core/{security,contracts}.py`
+- **Schemas:** `backend/app/schemas/{__init__,auth,logs,exercises,set_summary,streams,coaching,sets}.py`
+- **Services:** `backend/app/services/{__init__,gpu,rate_limit,context,sets_service,volume}.py`
+- **Coach:** `backend/app/services/coach/{__init__,guardrail,numbers,rules,llm,service}.py`
+- **Gemini (optional):** `backend/app/services/gemini_optional/{__init__,parser}.py`
+- **Changed:** `backend/app/main.py` (routers, validation handler, DI), `backend/app/models/constants.py` (fault flags, VL caps)
+- **Scripts:** `backend/scripts/export_contracts.py`
+- **Contracts:** `contracts/{channels.v1,exercise_library.v1,set_summary.v1.schema,coaching_card.v1.schema,coaching_prescription.v1.schema}.json`, `contracts/fixtures/set_summary_{clean,fatigue,valgus}.json`
+- **Tests:** `backend/tests/{__init__,conftest,test_guardrail,test_numbers,test_coach_service,test_ollama_client,test_api_auth,test_api_logs,test_api_sets,test_contract}.py`
+- **Infrastructure:** `docker-compose.yml` (build context = repo root), `backend/Dockerfile`, `backend/.dockerignore` → `backend/Dockerfile.dockerignore`, `backend/pytest.ini`
+- **Docs:** `docs/CONTRACT.md` (new), `docs/DECISIONS.md` (D-028…D-043), `docs/PROGRESS.md`, `README.md` (API section)
+
 ### Step 3
-- `backend/app/core/config.py` (split `DatabaseSettings` so Alembic needs no `SECRET_KEY`)
-- `backend/app/db/{__init__,base,session,timescale}.py`
-- `backend/app/models/{__init__,constants,core,biomech,food}.py`
-- `backend/alembic.ini`, `backend/alembic/{env.py,script.py.mako}`
-- `backend/alembic/versions/{0001_v1_baseline,0002_v2_core,0003_timescale}.py`
-- `backend/docker-entrypoint.sh` (policy sync after migrations)
-- `backend/scripts/{__init__,import_sqlite}.py`
-- `backend/tests/{conftest,test_models,test_migrations,test_timescale_sql,test_import_sqlite}.py`
-- `docs/DECISIONS.md` (D-021…D-027), `docs/PROGRESS.md` (new), `README.md` (Database section)
+- `backend/app/core/config.py`, `backend/app/db/*`, `backend/app/models/*`, `backend/alembic*`, migrations 0001–0003, `backend/docker-entrypoint.sh`, `backend/scripts/import_sqlite.py`, tests for models/migrations/timescale/import, `docs/DECISIONS.md` (D-021…D-027), `docs/PROGRESS.md`, `README.md`
 
 ### Step 2
-- Added: `.env.example`, `.gitattributes`, `docker-compose.yml`, `README.md`, `archive/README.md`, `docs/DECISIONS.md`, `backend/{Dockerfile,.dockerignore,docker-entrypoint.sh,pytest.ini,requirements*.txt}`, `backend/app/{__init__,main}.py`, `backend/app/core/{__init__,config}.py`, `backend/tests/test_config.py`
-- Changed: `.gitignore`
-- Moved: v1 backend + `static/` → `archive/legacy_v1/`; `New folder/` code → `archive/new_folder_snapshot/`
-- Untracked (kept on disk): `New folder/mr_fit.env`, `mrfit.db`, `New folder/mrfit.db`, `__pycache__/`
+- Added the compose, Docker, requirements, `.env.example`, settings, health, `archive/README.md` and `docs/DECISIONS.md` files; moved v1 code to `archive/`; untracked `New folder/mr_fit.env`, the `.db` files and `__pycache__/`

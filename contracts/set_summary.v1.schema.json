@@ -1,0 +1,341 @@
+{
+  "$defs": {
+    "FaultCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "incomplete_rom": {
+          "minimum": 0,
+          "title": "Incomplete Rom",
+          "type": "integer"
+        },
+        "lumbar_flexion": {
+          "minimum": 0,
+          "title": "Lumbar Flexion",
+          "type": "integer"
+        },
+        "valgus": {
+          "minimum": 0,
+          "title": "Valgus",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "valgus",
+        "lumbar_flexion",
+        "incomplete_rom"
+      ],
+      "title": "FaultCounts",
+      "type": "object"
+    },
+    "RepMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "fault_flags": {
+          "items": {
+            "enum": [
+              "valgus",
+              "lumbar_flexion",
+              "incomplete_rom"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Fault Flags",
+          "type": "array"
+        },
+        "mean_velocity_m_s": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "mean concentric (propulsive) velocity",
+          "title": "Mean Velocity M S"
+        },
+        "peak_depth_deg": {
+          "anyOf": [
+            {
+              "maximum": 360,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Peak Depth Deg"
+        },
+        "rep_index": {
+          "description": "1-based, contiguous",
+          "minimum": 1,
+          "title": "Rep Index",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rep_index",
+        "peak_depth_deg",
+        "mean_velocity_m_s",
+        "fault_flags"
+      ],
+      "title": "RepMetrics",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "data_source": {
+      "enum": [
+        "simulated",
+        "real"
+      ],
+      "title": "Data Source",
+      "type": "string"
+    },
+    "device_labels": {
+      "items": {
+        "maxLength": 64,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 8,
+      "minItems": 1,
+      "title": "Device Labels",
+      "type": "array"
+    },
+    "ended_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Ended At"
+    },
+    "exercise": {
+      "enum": [
+        "squat",
+        "deadlift",
+        "bench_press",
+        "push_up"
+      ],
+      "title": "Exercise",
+      "type": "string"
+    },
+    "fault_counts": {
+      "$ref": "#/$defs/FaultCounts"
+    },
+    "goal": {
+      "enum": [
+        "max_strength",
+        "hypertrophy"
+      ],
+      "title": "Goal",
+      "type": "string"
+    },
+    "load_kg": {
+      "anyOf": [
+        {
+          "maximum": 1000,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Load Kg"
+    },
+    "mpv_final": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Mpv Final"
+    },
+    "mpv_initial": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Mpv Initial"
+    },
+    "mqs_breakdown": {
+      "anyOf": [
+        {
+          "maxProperties": 16,
+          "patternProperties": {
+            "^[a-z][a-z0-9_]{0,31}$": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Mqs Breakdown"
+    },
+    "mqs_score": {
+      "anyOf": [
+        {
+          "maximum": 100,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Mqs Score"
+    },
+    "per_rep": {
+      "items": {
+        "$ref": "#/$defs/RepMetrics"
+      },
+      "maxItems": 200,
+      "title": "Per Rep",
+      "type": "array"
+    },
+    "reps_completed": {
+      "maximum": 200,
+      "minimum": 0,
+      "title": "Reps Completed",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "set_id": {
+      "format": "uuid",
+      "title": "Set Id",
+      "type": "string"
+    },
+    "set_index": {
+      "minimum": 1,
+      "title": "Set Index",
+      "type": "integer"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Started At"
+    },
+    "symmetry_index": {
+      "anyOf": [
+        {
+          "maximum": 100,
+          "minimum": -100,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Symmetry Index"
+    },
+    "velocity_loss_pct": {
+      "anyOf": [
+        {
+          "maximum": 100,
+          "minimum": -100,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Velocity Loss Pct"
+    },
+    "velocity_source": {
+      "anyOf": [
+        {
+          "enum": [
+            "imu",
+            "vision",
+            "fused"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "imu = sensor; vision = pose-derived (lower confidence); null = no velocity",
+      "title": "Velocity Source"
+    },
+    "vl_cap_exceeded": {
+      "title": "Vl Cap Exceeded",
+      "type": "boolean"
+    },
+    "vl_cap_pct": {
+      "exclusiveMinimum": 0,
+      "maximum": 100,
+      "title": "Vl Cap Pct",
+      "type": "number"
+    }
+  },
+  "required": [
+    "schema_version",
+    "set_id",
+    "exercise",
+    "goal",
+    "vl_cap_pct",
+    "set_index",
+    "reps_completed",
+    "load_kg",
+    "per_rep",
+    "mpv_initial",
+    "mpv_final",
+    "velocity_loss_pct",
+    "vl_cap_exceeded",
+    "velocity_source",
+    "mqs_score",
+    "mqs_breakdown",
+    "symmetry_index",
+    "fault_counts",
+    "data_source",
+    "device_labels",
+    "started_at",
+    "ended_at"
+  ],
+  "title": "SetSummaryPayload",
+  "type": "object"
+}

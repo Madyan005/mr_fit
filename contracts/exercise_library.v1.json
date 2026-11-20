@@ -1,0 +1,178 @@
+{
+  "schema_version": "1.0.0",
+  "source": "archive/legacy_v1/static/app.js EXERCISES (26 built-ins), extracted 2026-11-20",
+  "muscles": [
+    "Chest",
+    "Back",
+    "Shoulders",
+    "Legs",
+    "Arms",
+    "Core"
+  ],
+  "equipment_types": [
+    "Barbell",
+    "Dumbbell",
+    "Machine",
+    "Cable",
+    "Bodyweight",
+    "Equipment"
+  ],
+  "exercises": [
+    {
+      "name": "Bench Press",
+      "muscle": "Chest",
+      "equipment_type": "Barbell",
+      "biomech_key": "bench_press"
+    },
+    {
+      "name": "Incline Bench Press",
+      "muscle": "Chest",
+      "equipment_type": "Barbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Chest Fly",
+      "muscle": "Chest",
+      "equipment_type": "Dumbbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Push-Up",
+      "muscle": "Chest",
+      "equipment_type": "Bodyweight",
+      "biomech_key": "push_up"
+    },
+    {
+      "name": "Squat",
+      "muscle": "Legs",
+      "equipment_type": "Barbell",
+      "biomech_key": "squat"
+    },
+    {
+      "name": "Leg Press",
+      "muscle": "Legs",
+      "equipment_type": "Machine",
+      "biomech_key": null
+    },
+    {
+      "name": "Romanian Deadlift",
+      "muscle": "Legs",
+      "equipment_type": "Barbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Lunges",
+      "muscle": "Legs",
+      "equipment_type": "Dumbbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Leg Curl",
+      "muscle": "Legs",
+      "equipment_type": "Machine",
+      "biomech_key": null
+    },
+    {
+      "name": "Calf Raise",
+      "muscle": "Legs",
+      "equipment_type": "Machine",
+      "biomech_key": null
+    },
+    {
+      "name": "Deadlift",
+      "muscle": "Back",
+      "equipment_type": "Barbell",
+      "biomech_key": "deadlift"
+    },
+    {
+      "name": "Pull-Up",
+      "muscle": "Back",
+      "equipment_type": "Bodyweight",
+      "biomech_key": null
+    },
+    {
+      "name": "Lat Pulldown",
+      "muscle": "Back",
+      "equipment_type": "Machine",
+      "biomech_key": null
+    },
+    {
+      "name": "Barbell Row",
+      "muscle": "Back",
+      "equipment_type": "Barbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Cable Row",
+      "muscle": "Back",
+      "equipment_type": "Machine",
+      "biomech_key": null
+    },
+    {
+      "name": "Overhead Press",
+      "muscle": "Shoulders",
+      "equipment_type": "Barbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Lateral Raise",
+      "muscle": "Shoulders",
+      "equipment_type": "Dumbbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Front Raise",
+      "muscle": "Shoulders",
+      "equipment_type": "Dumbbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Face Pull",
+      "muscle": "Shoulders",
+      "equipment_type": "Cable",
+      "biomech_key": null
+    },
+    {
+      "name": "Barbell Curl",
+      "muscle": "Arms",
+      "equipment_type": "Barbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Hammer Curl",
+      "muscle": "Arms",
+      "equipment_type": "Dumbbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Tricep Dip",
+      "muscle": "Arms",
+      "equipment_type": "Bodyweight",
+      "biomech_key": null
+    },
+    {
+      "name": "Skull Crusher",
+      "muscle": "Arms",
+      "equipment_type": "Barbell",
+      "biomech_key": null
+    },
+    {
+      "name": "Plank",
+      "muscle": "Core",
+      "equipment_type": "Bodyweight",
+      "biomech_key": null
+    },
+    {
+      "name": "Crunch",
+      "muscle": "Core",
+      "equipment_type": "Bodyweight",
+      "biomech_key": null
+    },
+    {
+      "name": "Ab Wheel",
+      "muscle": "Core",
+      "equipment_type": "Equipment",
+      "biomech_key": null
+    }
+  ]
+}

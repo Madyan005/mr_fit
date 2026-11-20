@@ -35,6 +35,20 @@ docker compose up
 
 API: `http://<host-LAN-IP>:8000` (health: `/health`). From the Android emulator use `http://10.0.2.2:8000`.
 
+## API
+
+Interactive docs at `/docs` once the stack is up. Contract details: [docs/CONTRACT.md](docs/CONTRACT.md).
+
+| Area | Endpoints |
+|---|---|
+| Auth | `POST /auth/signup`, `/auth/login`, `/auth/refresh` (rotating), `/auth/logout` |
+| Logs (v1, ported) | `GET/POST /logs`, `PUT/DELETE /logs/{id}`, `GET /logs/heatmap`, `GET /stats` |
+| Exercise library | `GET /exercises`, `POST /exercises/custom`, `DELETE /exercises/custom/{id}` |
+| Biomechanics sets | `POST /sets` (idempotent by `set_id`), `GET /sets`, `GET /sets/{id}`, `POST /sets/{id}/timeseries`, `POST /sets/{id}/skeleton` |
+| Coaching | `POST /sets/{id}/coaching`: medical guardrail → local SLM (`deepseek-r1:1.5b`) → schema + number checks → deterministic fallback |
+| Optional | `POST /parse-entry` (Gemini text parsing; `503` unless `GEMINI_ENABLED=true`) |
+| Meta | `GET /health` |
+
 ## Database
 
 Migrations run automatically when the `api` container starts (`alembic upgrade head`,
