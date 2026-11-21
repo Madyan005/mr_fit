@@ -51,9 +51,15 @@ final mockWorldProvider = Provider<MockWorld>(
 /// Real mode: null (a real athlete needs no script).
 final simulationHooksProvider = Provider<SimulationHooks?>((ref) => throw UnimplementedError('bind simulationHooksProvider'));
 
-/// Data source recorded on every set (`data_source`). Any mock bound => simulated.
-final dataSourceProvider = Provider<DataSource>(
-    (ref) => ref.watch(sourceModeProvider) == SourceMode.mock ? DataSource.simulated : DataSource.real);
+/// Data source recorded on every set (`data_source`). Any mock bound => simulated. It
+/// follows what is bound, not the mode, so a Real mode with one line swapped back to a
+/// Mock* binding is still labelled.
+final dataSourceProvider = Provider<DataSource>((ref) =>
+    ref.watch(sourceModeProvider) == SourceMode.mock ||
+            ref.watch(sensorSourceProvider) is MockSensorSource ||
+            ref.watch(visionPipelineProvider) is MockVisionPipeline
+        ? DataSource.simulated
+        : DataSource.real);
 
 /// True while any mock is bound -> the UI shows the "SIMULATED" banner.
 final anyMockActiveProvider = Provider<bool>((ref) => ref.watch(dataSourceProvider) == DataSource.simulated);
