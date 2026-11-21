@@ -213,7 +213,11 @@ class CoachingCardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final (badge, icon) = switch (card.source) {
-      CoachingSource.llm => ('AI coach (local model)', Icons.auto_awesome),
+      // The model name tells a real model from the backend's test double (fake-llm).
+      CoachingSource.llm => (
+          card.model == null ? 'AI coach (local model)' : 'AI coach (local model · ${card.model})',
+          Icons.auto_awesome
+        ),
       CoachingSource.fallback => ('Rule-based feedback', Icons.rule),
       CoachingSource.guardrail => ('Safety notice', Icons.health_and_safety),
     };

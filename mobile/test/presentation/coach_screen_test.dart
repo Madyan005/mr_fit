@@ -14,7 +14,7 @@ import '../support/app_harness.dart';
 Map<String, Object?> fixture(String name) =>
     (jsonDecode(File('../contracts/fixtures/set_summary_$name.json').readAsStringSync()) as Map).cast<String, Object?>();
 
-Map<String, Object?> cardJson(String setId, {String source = 'fallback', String? notice}) => {
+Map<String, Object?> cardJson(String setId, {String source = 'fallback', String? notice, String? model}) => {
       'schema_version': '1.0.0', 'set_id': setId, 'source': source,
       'summary': source == 'guardrail' ? 'Please see a professional.' : 'Velocity loss passed your cap.',
       'cues': source == 'guardrail' ? <Object?>[] : [
@@ -23,7 +23,7 @@ Map<String, Object?> cardJson(String setId, {String source = 'fallback', String?
       'focus_metric': source == 'guardrail' ? null : 'velocity_loss_pct',
       'focus_value': source == 'guardrail' ? null : 24.4,
       'next_set': {'action': 'reduce_load', 'rest_seconds': 240, 'load_change_pct': -5.0, 'rule_id': 'vl_cap_exceeded'},
-      'medical_notice': notice, 'model': null, 'fallback_reason': null, 'generated_at': '2026-11-20T10:05:31Z',
+      'medical_notice': notice, 'model': model, 'fallback_reason': null, 'generated_at': '2026-11-20T10:05:31Z',
     };
 
 Map<String, Object?> setJson(Map<String, Object?> payload, {Map<String, Object?>? coaching, String created = '2026-11-20T10:05:30Z'}) => {
@@ -65,6 +65,14 @@ void main() {
     expect(find.text('Focus: Velocity loss 24.4 %'), findsOneWidget);
     expect(find.text('Next set: Reduce load 5 % · rest 240 s'), findsOneWidget);
     expect(find.byType(TextField), findsNothing, reason: 'read-only: no chat input');
+    await h.dispose(tester);
+  });
+
+  testWidgets('a model-written card names its model, so the backend fake LLM is visible', (tester) async {
+    h.http.reply('GET', '/sets', 200,
+        {'items': [setJson(fatigue, coaching: cardJson(fatigueId, source: 'llm', model: 'fake-llm'))], 'next_before': null});
+    await openCoach(tester);
+    expect(find.text('AI coach (local model · fake-llm)'), findsOneWidget);
     await h.dispose(tester);
   });
 
