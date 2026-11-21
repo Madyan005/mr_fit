@@ -4,15 +4,17 @@ Flutter (Android) strength-training app with velocity-based biomechanics, a
 PostgreSQL + TimescaleDB backend, and a constrained local coach
 (Ollama, `deepseek-r1:1.5b`).
 
-> **Status: prototype, under construction.** Sensors and vision are simulated
-> (Mock implementations) until hardware is chosen. A full "real vs simulated"
-> table and architecture diagram land at the end of the build.
+> **Status: prototype.** Sensors and vision are simulated (Mock implementations,
+> labelled SIMULATED) until hardware is chosen. What is real and what is simulated,
+> the architecture, how to run the demo and what was verified:
+> [docs/FINAL_SUMMARY.md](docs/FINAL_SUMMARY.md). Replacing the mocks with hardware:
+> [docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md).
 
 ## Layout
 
 ```
 backend/    FastAPI API, Alembic migrations, tests
-mobile/     Flutter app (added in a later step)
+mobile/     Flutter Android app (see mobile/README.md)
 contracts/  Shared JSON schemas + fixtures (SetSummaryPayload)
 docs/       DECISIONS.md and design docs
 archive/    v1 web app, kept for reference

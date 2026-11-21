@@ -3,7 +3,7 @@
 Updated after every step. Decisions and assumptions live in [DECISIONS.md](DECISIONS.md).
 Branch: `feat/mr-fit-2`.
 
-## Status: 6 of 7 steps done; step 7 (final summary) next
+## Status: 7 of 7 steps done. The build is complete; summary in [FINAL_SUMMARY.md](FINAL_SUMMARY.md)
 
 | # | Step | Status | Commit |
 |---|---|---|---|
@@ -17,20 +17,14 @@ Branch: `feat/mr-fit-2`.
 | 5c | Data layer (API client, secure storage, drift+SQLCipher, retry queue) + ported screens (Auth, Track, Library+heatmap, Stats, Coach history) | ✅ done | `d0b6e26` … `4b838a6` (7 checkpoints + live test) |
 | 5d | 7-phase screens (Device Connect → Rest audit), HUD + skeleton overlay, haptics/TTS, foreground task, SIMULATED banner, debug switch | ✅ done | `2aa9411` … `e68d608` |
 | 6 | Integration + scripted ~7-minute demo runner | ✅ done (Docker stack not run: Docker not installed) | `0372333`, `2c00718` |
-| 7 | Final summary: real vs simulated, how to plug in real sensor/vision | ⏭ next | |
+| 7 | Final summary: real vs simulated, how to plug in real sensor/vision | ✅ done | `e547f44`, `cc1e51f`, `a8a3210` + docs |
 
 ## Exact next action
 
-Step 7, the final summary (`docs/FINAL_SUMMARY.md`, no code changes):
-- what is real and what is simulated, per component (sensor, vision, time sync, coach model, Gemini);
-- how to plug in the real sensor and vision: the REAL SLOT files, the one binding to change
-  (`mobile/lib/app/bindings.dart`), and what each slot must deliver;
-- how to run the demo (backend with fake or real LLM, emulator, "Run scripted demo");
-- verified vs not verified across all steps, and the open decisions.
-
-Separately, if the user wants the Docker stack checked: install Docker Desktop (administrator
-rights and WSL2; the user's decision), then `docker compose up`, the online migration test
-and the opt-in live client test against port 8000.
+None in the build plan. Next work depends on decisions from the user or the team (table below):
+1. **Hardware chosen** → follow [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md): implement the two REAL SLOTs, add them to the contract tests, bind them in `mobile/lib/app/bindings.dart`.
+2. **Docker installed** (admin + WSL2, user's call) → `docker compose up` with `LLM_BACKEND=fake`, then the online migration test (`MRFIT_TEST_PG_URL=… pytest -k online`) and the opt-in client test (`MRFIT_LIVE_API=http://127.0.0.1:8000 flutter test test/e2e/live_backend_test.dart`); then the real `deepseek-r1:1.5b` and its fallback rate.
+3. **Physical phone** → the checks the emulator cannot do (sound, vibration, screen-off streaming, battery).
 
 ## Open questions / pending decisions
 
@@ -52,12 +46,25 @@ and the opt-in live client test against port 8000.
 | Fake-LLM card text ("Solid set…") contradicts a set over its VL cap; the deterministic next-set rule is right | Only the fake client; the card now names its model ("local model · fake-llm"); real model output goes through the number checker and rules | Check with real Ollama |
 | Docker is not installed on this PC, so the compose stack (API + TimescaleDB + Ollama) has never been run | Throwaway SQLite API with fake LLM for the integration checks | User: install Docker Desktop (needs admin + WSL2) if the stack should be verified here |
 | Demo timeline: D-017 assumes ~45 s live sets; the mock sets run 16–20 s, so rests are ~70 s | D-083: same 6:40 total, longer rests | Briefing timings, if they matter |
+| No camera code yet: a real pose pipeline must open the camera itself; a live preview behind the skeleton needs UI work | D-086; documented in INTEGRATION_GUIDE.md | Pose model decision (O-3) |
+| The emulator demo used a throwaway SQLite server script that is not in the repo; the documented way (`docker compose`) is unverified | Docker path documented | User: add a no-Docker dev server script to `backend/`? (touches the backend) |
 | Track/heatmap/stats days are UTC (D-067), so near midnight "Today" can differ from the local date | Labelled "(UTC day)" | Decide if a server-side timezone parameter is wanted |
 | Session thresholds (framing 0.8 held 1 s, tap spike > g + 15 m/s², 600 ms match window) | D-074, tuned on the mock | Validate with the real sensor and camera |
 | Spoken cues and vibration were not heard/felt: the emulator has no vibrator and audio was not checked | Calls verified in tests; plugin errors are ignored by design | Check on a physical phone |
 | Android logged once "Foreground service start … does not have any types" although dumpsys shows type dataSync | Service runs in the foreground | Re-check on a physical Android 14+ phone |
 
 ## Verification log
+
+### Step 7 — Final summary and integration guide (2026-11-21)
+Verified (run here):
+- **Gate:** `flutter analyze` "No issues found!", `flutter test` **130 pass, 1 skipped**; backend **167 passed, 1 skipped** (unchanged since step 4).
+- **Contract tests for the REAL SLOTs** (new; the slot comments pointed to them but they did not exist): 4 sensor + 3 vision tests pass against the mocks. Checked against two deliberately broken sensors (raw device time, undeclared channel): both fail as they should.
+- **Labelling fix (D-084):** with one Real line swapped back to a mock, sets were labelled `real` and the banner hidden. The new `test/app/bindings_test.dart` fails on the old binding and passes now.
+- **Foreground service type (D-085):** follows the sensor only, so a real sensor with mocked vision still gets `connectedDevice`. Covered by the same test.
+- Facts in FINAL_SUMMARY.md checked against the code, the test runs and the step 6 emulator log.
+
+Not verified: everything listed under "not verified" in FINAL_SUMMARY.md (real hardware, Docker stack and real model, physical phone, Gemini). No emulator run in step 7: its two app changes are in the binding and covered by unit tests, and Mock mode behaves as before (all session and demo tests unchanged and passing).
+
 
 ### Step 6 — Scripted demo and integration (2026-11-21)
 Verified (run here):
@@ -236,6 +243,11 @@ Not verified: `docker compose up`, image build, GPU passthrough, model pull.
 Read `mrfit_reverse_engineer.md` and every v1 source file. Report and code mismatches were recorded (13 routes, not 9; `mr_fit.env.md` missing; tracked secret and DB files; `/ai-coach` unused; library versions unverifiable).
 
 ## Files changed per step
+
+### Step 7
+- **Docs:** `docs/FINAL_SUMMARY.md` (new), `docs/INTEGRATION_GUIDE.md` (new), `README.md` (status, layout), `docs/DECISIONS.md` (D-084…D-086), `docs/PROGRESS.md`
+- **App:** `mobile/lib/app/bindings.dart` (`dataSourceProvider` follows the bound mocks, `sensorSimulatedProvider`), `mobile/lib/app/session/session_controller.dart` (keep-alive type from the sensor)
+- **Tests:** `mobile/test/app/bindings_test.dart`, `mobile/test/data/sensor_source_contract_test.dart`, `mobile/test/data/vision_pipeline_contract_test.dart` (all new)
 
 ### Step 6
 - **Demo runner:** `mobile/lib/app/session/demo_runner.dart` (new)
