@@ -3,7 +3,7 @@
 Updated after every step. Decisions and assumptions live in [DECISIONS.md](DECISIONS.md).
 Branch: `feat/mr-fit-2`.
 
-## Status: 4 of 7 steps done; step 5 in progress (5a ✅, 5b ✅, Phase A ✅, 5c ✅, 5d ⏭)
+## Status: 5 of 7 steps done (step 5 = 5a, 5b, Phase A, 5c, 5d ✅); step 6 next
 
 | # | Step | Status | Commit |
 |---|---|---|---|
@@ -15,18 +15,21 @@ Branch: `feat/mr-fit-2`.
 | 5b | Seeded mocks (sensor, vision, time sync) + MetricsEngine + Isolate worker + golden tests | ✅ done | `73db396` |
 | A | Phase A: install the Flutter/Android toolchain; analyze, test, build and run the 5a/5b code for real | ✅ done | `bdbc305` … `9a94364` (one commit per fix) |
 | 5c | Data layer (API client, secure storage, drift+SQLCipher, retry queue) + ported screens (Auth, Track, Library+heatmap, Stats, Coach history) | ✅ done | `d0b6e26` … `4b838a6` (7 checkpoints + live test) |
-| 5d | 7-phase screens (Device Connect → Rest audit), HUD + skeleton overlay, haptics/TTS, foreground task, SIMULATED banner, debug switch | ⏭ next | |
-| 6 | Integration + scripted ~7-minute demo runner | ⏳ | |
+| 5d | 7-phase screens (Device Connect → Rest audit), HUD + skeleton overlay, haptics/TTS, foreground task, SIMULATED banner, debug switch | ✅ done | `2aa9411` … `e68d608` |
+| 6 | Integration + scripted ~7-minute demo runner | ⏭ next | |
 | 7 | Final summary: real vs simulated, how to plug in real sensor/vision | ⏳ | |
 
 ## Exact next action
 
-Step 5d, first change: a "Session" entry point (a fifth tab or a button on Track) that opens
-Phase 1 **Device Connect** on the mock sensor source from `bindings.dart`. The remaining phases
-follow the D-017 placeholder timings: Goal → Positioning → Calibration (TapTimeSync) → Live
-HUD with skeleton overlay → Set summary. A finished set goes through
-`SetRepository.saveCompletedSet`; the queue and the Coach screen already handle it. Then the
-foreground task, haptics/TTS and the debug Mock/Real switch.
+Step 6, first change: a **demo runner** (`mobile/lib/app/session/demo_runner.dart`) that drives
+`SessionController` through the three demo sets on the D-017 timeline (≈7 min). It continues,
+taps three times, starts each set, waits out a shortened rest and moves on, with on-screen
+narration of each phase. It is started from the Session tab ("Run scripted demo", Mock mode only).
+Then end-to-end integration checks:
+- the runner against the live API (fake LLM) on the emulator;
+- the docker compose stack (needs Docker; not yet run, see step 2);
+- the opt-in live client test against it.
+
 Same gate after every checkpoint: `flutter analyze` and `flutter test` must both exit 0.
 
 ## Open questions / pending decisions
@@ -48,8 +51,37 @@ Same gate after every checkpoint: `flutter analyze` and `flutter test` must both
 | OneDrive also interfered in 5c: build_runner could not delete `.dart_tool/build/generated`, and `flutter test` once failed copying its cache, then hung | Clear the folder and re-run | Same as above: move the repo out of OneDrive |
 | Fake-LLM card text ("Solid set…") contradicts a set over its VL cap; the deterministic next-set rule is right | Only the fake client; real model output goes through the number checker and rules | Check with real Ollama |
 | Track/heatmap/stats days are UTC (D-067), so near midnight "Today" can differ from the local date | Labelled "(UTC day)" | Decide if a server-side timezone parameter is wanted |
+| Session thresholds (framing 0.8 held 1 s, tap spike > g + 15 m/s², 600 ms match window) | D-074, tuned on the mock | Validate with the real sensor and camera |
+| Spoken cues and vibration were not heard/felt: the emulator has no vibrator and audio was not checked | Calls verified in tests; plugin errors are ignored by design | Check on a physical phone |
+| Android logged once "Foreground service start … does not have any types" although dumpsys shows type dataSync | Service runs in the foreground | Re-check on a physical Android 14+ phone |
 
 ## Verification log
+
+### Step 5d — 7-phase session (2026-11-21)
+Verified (run here):
+- **Gate at every checkpoint:** `flutter analyze` "No issues found!" and `flutter test` exit 0. Final: **113 tests pass, 1 skipped** (opt-in live test). Backend unchanged.
+- **Session controller tests (fake time, mock sensor and vision, real metrics engine inline):**
+  - all three demo sets run through all 7 phases: clean squat (5 reps, set 1), fatigue bench (cap exceeded, long buzz and "Rack the bar"), valgus squat ("Knees out.", at most one fault cue per rep);
+  - positioning auto-advances only after framing; TapTimeSync measures the mock's 37 ms clock lead (37–47 ms);
+  - a tap the sensor never feels is dropped with a message; Real mode without hardware shows a clear error instead of crashing.
+- **UI flow test:** every phase screen in order through the real widgets, the real upload queue with a fake backend, the card in the rest view with its rest time, the next demo scenario preselected, and End session.
+- **Developer switch test:** Mock ↔ Real rebuilds the providers, keeps the sign-in, persists the choice, and hides or shows the SIMULATED banner.
+- **On the emulator** (debug APK, Android 16, live API with fake LLM, real time, engine in its isolate):
+  - **Phases 1–4:** connect (MockSensorSource, battery 87 %, −55 dBm); demo set list; positioning (framing 45 % → auto-advance); calibration measured **41 ms offset, 2 ms spread**.
+  - **Set 1, clean squat:** 5 reps, velocity loss 12.1 % of a 30 % cap, MQS 94.3; uploaded; card: +2.5 % load, rest 90 s.
+  - **Set 2, fatigue bench:** 6 reps, **24.2 % of a 20 % cap, cap exceeded**, incomplete ROM ×1; card: −5 %, rest 240 s.
+  - **Set 3, valgus squat:** HUD skeleton **red** with **"Knees out."**; 4 reps, valgus ×2; card: −5 %, rest 180 s.
+  - **Foreground service:** `isForeground=true`, type dataSync while the session ran; no service after "End session".
+  - **Coach** lists the three sets; no FATAL or Flutter errors in logcat.
+- **Bugs found and fixed:**
+  - Switching the demo scenario raced with "Start set": the old mock sensor could be used. Found by tests.
+  - A set saved during an in-flight sync pass waited for the 30 s timer. Seen on the emulator, reproduced by a failing test, fixed (D-082).
+
+Not verified:
+- A physical phone: audible TTS, felt vibration, real notification-permission dialog (granted with `adb` for the run), screen-off/background streaming over minutes, battery use.
+- Real sensor, camera preview and pose model (REAL SLOTs, hardware undecided).
+- The ≈7-minute scripted demo timeline (step 6).
+
 
 ### Step 5c — Data layer and ported screens (2026-11-21)
 Verified (run here):
@@ -182,6 +214,15 @@ Not verified: `docker compose up`, image build, GPU passthrough, model pull.
 Read `mrfit_reverse_engineer.md` and every v1 source file. Report and code mismatches were recorded (13 routes, not 9; `mr_fit.env.md` missing; tracked secret and DB files; `/ai-coach` unused; library versions unverifiable).
 
 ## Files changed per step
+
+### Step 5d
+- **Session:** `mobile/lib/app/session/{session_controller,session_providers}.dart`, `mobile/lib/domain/session/session_ports.dart`, `mobile/lib/domain/metrics/metrics_session.dart`, `mobile/lib/domain/metrics/metrics_worker.dart` (implements `LiveMetricsSession`)
+- **Devices:** `mobile/lib/data/feedback/{device_cue_output,foreground_keep_alive}.dart`
+- **Mocks and binding:** `mobile/lib/data/sensors/mock/{mock_world,mock_sensor_source}.dart` (ports), `mobile/lib/app/bindings.dart` (clock, simulation hooks, TapTimeSync in Mock mode)
+- **App and screens:** `mobile/lib/app/{app,app_root}.dart`, `mobile/lib/main.dart`, `mobile/lib/presentation/session/{session_tab,session_page,skeleton_painter}.dart`, `mobile/lib/presentation/settings/settings_page.dart`, `mobile/lib/presentation/shell/home_shell.dart`, `mobile/lib/presentation/coach/coach_screen.dart` (shared card view)
+- **Data:** `mobile/lib/data/sync/{set_repository,sync_service}.dart`
+- **Tests:** `mobile/test/session/session_controller_test.dart`, `mobile/test/presentation/{session_flow,settings_switch}_test.dart`, `mobile/test/support/{session_fakes,app_harness,fake_http}.dart`, `mobile/test/data/sync_queue_test.dart`
+- **Config and docs:** `mobile/pubspec.yaml` and `pubspec.lock` (`fake_async`), `mobile/README.md`, `docs/DECISIONS.md` (D-074…D-082), `docs/PROGRESS.md`
 
 ### Step 5c
 - **Data:** `mobile/lib/data/{storage/secret_store,auth/token_store,api/api_client,api/api_exception,api/api_models,api/mrfit_api,local/app_database,local/encrypted_db,sync/sync_service,sync/set_repository,voice/voice_input}.dart`

@@ -22,6 +22,11 @@ flutter run                    # Mock mode is the default: runs on an emulator, 
 flutter test                   # unit, golden, data-layer and widget tests (fake backend, no network)
 ```
 
+**Session** tab: the 7-phase velocity-tracked session (connect, exercise/goal, positioning,
+3-tap calibration, live HUD, set end, rest and coaching). In Mock mode it plays three demo
+sets: clean squat, fatigue bench press, valgus squat. **Settings → Data source** switches
+Mock/Real (Real needs the hardware REAL SLOTs, not implemented yet).
+
 The backend URL is entered on the sign-in screen (default `http://10.0.2.2:8000`, the
 emulator's alias for the PC). From a phone use `http://<PC-LAN-IP>:8000`.
 
@@ -49,7 +54,9 @@ lib/
   data/api|auth|storage    dio client with single-flight token refresh, typed endpoints, secure storage
   data/local|sync          drift + SQLCipher DB, SetRepository, SyncService (retry queue)
   features/food/           optional, isolated
-  presentation/            screens (Riverpod): auth, track, library (+heatmap), stats, coach
+  app/session/             SessionController (7 phases), session providers
+  data/feedback/           vibration + TTS cues, foreground service
+  presentation/            screens (Riverpod): auth, track, library (+heatmap), stats, coach, session, settings
 ```
 
 Rule: hardware names (ESP32, packet structs, UUIDs, MACs) may appear **only** in
