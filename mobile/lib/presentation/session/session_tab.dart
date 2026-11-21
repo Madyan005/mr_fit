@@ -28,6 +28,19 @@ class SessionTab extends ConsumerWidget {
         icon: const Icon(Icons.play_circle_outline),
         label: const Text('Start session'),
       ),
+      if (ref.watch(sourceModeProvider) == SourceMode.mock) ...[
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          key: const Key('session.demo'),
+          onPressed: () => Navigator.of(context)
+              .push(MaterialPageRoute<void>(builder: (_) => const SessionPage(demo: true))),
+          icon: const Icon(Icons.slideshow_outlined),
+          label: const Text('Run scripted demo'),
+        ),
+        const SizedBox(height: 4),
+        Text('Plays the three demo sets through all 7 phases on a timeline of about 7 minutes, with narration. '
+            'Tap "Take over" to continue by hand.', style: t.bodySmall),
+      ],
     ]);
   }
 }

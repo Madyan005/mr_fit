@@ -124,6 +124,7 @@ void main() {
     await h.pump(tester);
     await tester.tap(find.text('Session'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('session.demo')), findsNothing, reason: 'the scripted demo is Mock mode only');
     await tester.tap(find.byKey(const Key('session.open')));
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 100)); // page transition
@@ -133,6 +134,49 @@ void main() {
     expect(tester.widget<FilledButton>(find.byKey(const Key('pair.continue'))).onPressed, isNull);
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('session.open')), findsOneWidget);
+    await h.dispose(tester);
+  });
+
+  testWidgets('"Run scripted demo" narrates the phases, advances by itself, and can be taken over', (tester) async {
+    final h = AppHarness(secrets: AppHarness.signedIn, extra: [
+      monotonicClockProvider.overrideWithValue(BindingClock(tester)),
+      cueOutputProvider.overrideWithValue(RecordingCues()),
+      keepAliveProvider.overrideWithValue(RecordingKeepAlive()),
+      metricsSessionFactoryProvider.overrideWithValue(InlineMetricsSession.start),
+    ]);
+    h.http.reply('GET', '/logs', 200, <Object?>[]);
+    await h.pump(tester);
+    await tester.tap(find.text('Session'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('session.demo')));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('1 · Connect device'), findsOneWidget);
+    expect(find.textContaining('Phase 1 · Connect.'), findsOneWidget);
+    expect(find.textContaining('of about 6:40'), findsOneWidget);
+    expect(find.text('SIMULATED'), findsOneWidget);
+
+    for (var i = 0; i < 31; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(find.text('2 · Exercise and goal'), findsOneWidget, reason: 'Continue pressed by the runner at 0:30');
+    expect(find.textContaining('Set 1: Squat, Hypertrophy'), findsOneWidget);
+    expect(find.textContaining('0:31 of about 6:40'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('demo.stop')));
+    await tester.pump();
+    expect(find.text('Scripted demo · stopped'), findsOneWidget);
+    expect(find.byKey(const Key('demo.stop')), findsNothing);
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(find.text('2 · Exercise and goal'), findsOneWidget, reason: 'nothing advances after Take over');
+    await tester.tap(find.byKey(const Key('session.end')));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(find.byKey(const Key('session.open')), findsOneWidget);
     await h.dispose(tester);
   });

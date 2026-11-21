@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../app/bindings.dart';
 import '../../app/providers.dart';
+import '../../app/session/demo_runner.dart';
 import '../../app/session/session_controller.dart';
 import '../../data/api/api_models.dart';
 import '../../data/local/app_database.dart';
@@ -36,7 +37,10 @@ final _localSetProvider = StreamProvider.autoDispose.family<LocalSet?, String>(
 
 /// Full-screen 7-phase training session (spec "new screens mapped to the 7 phases").
 class SessionPage extends ConsumerStatefulWidget {
-  const SessionPage({super.key});
+  const SessionPage({super.key, this.demo = false});
+
+  /// Played by the scripted demo runner (step 6, Mock mode) instead of by hand.
+  final bool demo;
 
   @override
   ConsumerState<SessionPage> createState() => _SessionPageState();
@@ -46,10 +50,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(sessionControllerProvider.notifier).start());
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget.demo
+        ? ref.read(demoRunnerProvider.notifier).run()
+        : ref.read(sessionControllerProvider.notifier).start());
   }
 
   Future<void> _end() async {
+    ref.read(demoRunnerProvider.notifier).stop();
     await ref.read(sessionControllerProvider.notifier).endSession();
     if (mounted) Navigator.of(context).pop();
   }
@@ -70,6 +77,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
         ),
         body: Column(children: [
           const SimulatedBanner(),
+          if (widget.demo) const DemoNarrationBar(),
           if (st.error case final e?)
             MaterialBanner(
               key: const Key('session.error'),
@@ -95,6 +103,71 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 }
 
 SessionController _ctl(WidgetRef ref) => ref.read(sessionControllerProvider.notifier);
+
+String _mmss(Duration d) => '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
+
+/// What the scripted demo is showing, its clock, and a way to take over by hand.
+class DemoNarrationBar extends ConsumerStatefulWidget {
+  const DemoNarrationBar({super.key});
+
+  @override
+  ConsumerState<DemoNarrationBar> createState() => _DemoNarrationBarState();
+}
+
+class _DemoNarrationBarState extends ConsumerState<DemoNarrationBar> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = ref.watch(demoRunnerProvider);
+    final t = Theme.of(context).textTheme;
+    final started = d.startedNs;
+    final elapsed = started == null
+        ? Duration.zero
+        : Duration(microseconds: (ref.read(monotonicClockProvider).nowNs() - started) ~/ 1000);
+    final status = d.running
+        ? 'Scripted demo · ${_mmss(elapsed)} of about ${_mmss(d.planned)}'
+        : d.finished
+            ? 'Scripted demo · finished'
+            : 'Scripted demo · stopped';
+    return Material(
+      color: Theme.of(context).colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+        child: Row(children: [
+          const Icon(Icons.record_voice_over_outlined),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(status, key: const Key('demo.status'), style: t.labelMedium),
+              Text(d.narration ?? 'Starting…', key: const Key('demo.narration'), style: t.bodyMedium),
+            ]),
+          ),
+          if (d.running)
+            TextButton(
+              key: const Key('demo.stop'),
+              onPressed: () => ref.read(demoRunnerProvider.notifier).stop(),
+              child: const Text('Take over'),
+            ),
+        ]),
+      ),
+    );
+  }
+}
 
 // ------------------------------------------------------------------ 1
 
