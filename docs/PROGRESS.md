@@ -3,7 +3,7 @@
 Updated after every step. Decisions and assumptions live in [DECISIONS.md](DECISIONS.md).
 Branch: `feat/mr-fit-2`.
 
-## Status: 5 of 7 steps done (step 5 = 5a, 5b, Phase A, 5c, 5d ✅); step 6 next
+## Status: 6 of 7 steps done; step 7 (final summary) next
 
 | # | Step | Status | Commit |
 |---|---|---|---|
@@ -16,21 +16,21 @@ Branch: `feat/mr-fit-2`.
 | A | Phase A: install the Flutter/Android toolchain; analyze, test, build and run the 5a/5b code for real | ✅ done | `bdbc305` … `9a94364` (one commit per fix) |
 | 5c | Data layer (API client, secure storage, drift+SQLCipher, retry queue) + ported screens (Auth, Track, Library+heatmap, Stats, Coach history) | ✅ done | `d0b6e26` … `4b838a6` (7 checkpoints + live test) |
 | 5d | 7-phase screens (Device Connect → Rest audit), HUD + skeleton overlay, haptics/TTS, foreground task, SIMULATED banner, debug switch | ✅ done | `2aa9411` … `e68d608` |
-| 6 | Integration + scripted ~7-minute demo runner | ⏭ next | |
-| 7 | Final summary: real vs simulated, how to plug in real sensor/vision | ⏳ | |
+| 6 | Integration + scripted ~7-minute demo runner | ✅ done (Docker stack not run: Docker not installed) | `0372333`, `2c00718` |
+| 7 | Final summary: real vs simulated, how to plug in real sensor/vision | ⏭ next | |
 
 ## Exact next action
 
-Step 6, first change: a **demo runner** (`mobile/lib/app/session/demo_runner.dart`) that drives
-`SessionController` through the three demo sets on the D-017 timeline (≈7 min). It continues,
-taps three times, starts each set, waits out a shortened rest and moves on, with on-screen
-narration of each phase. It is started from the Session tab ("Run scripted demo", Mock mode only).
-Then end-to-end integration checks:
-- the runner against the live API (fake LLM) on the emulator;
-- the docker compose stack (needs Docker; not yet run, see step 2);
-- the opt-in live client test against it.
+Step 7, the final summary (`docs/FINAL_SUMMARY.md`, no code changes):
+- what is real and what is simulated, per component (sensor, vision, time sync, coach model, Gemini);
+- how to plug in the real sensor and vision: the REAL SLOT files, the one binding to change
+  (`mobile/lib/app/bindings.dart`), and what each slot must deliver;
+- how to run the demo (backend with fake or real LLM, emulator, "Run scripted demo");
+- verified vs not verified across all steps, and the open decisions.
 
-Same gate after every checkpoint: `flutter analyze` and `flutter test` must both exit 0.
+Separately, if the user wants the Docker stack checked: install Docker Desktop (administrator
+rights and WSL2; the user's decision), then `docker compose up`, the online migration test
+and the opt-in live client test against port 8000.
 
 ## Open questions / pending decisions
 
@@ -49,13 +49,35 @@ Same gate after every checkpoint: `flutter analyze` and `flutter test` must both
 | Second Flutter 3.50.1 SDK at `C:\Users\ASUS\flutter` (1.5 GB, installed by the VS Code extension); VS Code's Dart language server runs from it | Left alone; `C:\src\flutter` comes first on PATH | User: delete it, or point VS Code's `dart.flutterSdkPath` at `C:\src\flutter` |
 | Memory: 15 GB RAM; emulator (≈4 GB) + Gradle + Chrome nearly used up the commit limit. In 5c a full `flutter test` run crashed test VMs with "Out of memory" while idle Gradle/Kotlin daemons and the emulator were still up | D-057 heap sizes; stop daemons (`gradlew --stop`) and the emulator when not needed | Close heavy apps while building, or enlarge the page file (user choice) |
 | OneDrive also interfered in 5c: build_runner could not delete `.dart_tool/build/generated`, and `flutter test` once failed copying its cache, then hung | Clear the folder and re-run | Same as above: move the repo out of OneDrive |
-| Fake-LLM card text ("Solid set…") contradicts a set over its VL cap; the deterministic next-set rule is right | Only the fake client; real model output goes through the number checker and rules | Check with real Ollama |
+| Fake-LLM card text ("Solid set…") contradicts a set over its VL cap; the deterministic next-set rule is right | Only the fake client; the card now names its model ("local model · fake-llm"); real model output goes through the number checker and rules | Check with real Ollama |
+| Docker is not installed on this PC, so the compose stack (API + TimescaleDB + Ollama) has never been run | Throwaway SQLite API with fake LLM for the integration checks | User: install Docker Desktop (needs admin + WSL2) if the stack should be verified here |
+| Demo timeline: D-017 assumes ~45 s live sets; the mock sets run 16–20 s, so rests are ~70 s | D-083: same 6:40 total, longer rests | Briefing timings, if they matter |
 | Track/heatmap/stats days are UTC (D-067), so near midnight "Today" can differ from the local date | Labelled "(UTC day)" | Decide if a server-side timezone parameter is wanted |
 | Session thresholds (framing 0.8 held 1 s, tap spike > g + 15 m/s², 600 ms match window) | D-074, tuned on the mock | Validate with the real sensor and camera |
 | Spoken cues and vibration were not heard/felt: the emulator has no vibrator and audio was not checked | Calls verified in tests; plugin errors are ignored by design | Check on a physical phone |
 | Android logged once "Foreground service start … does not have any types" although dumpsys shows type dataSync | Service runs in the foreground | Re-check on a physical Android 14+ phone |
 
 ## Verification log
+
+### Step 6 — Scripted demo and integration (2026-11-21)
+Verified (run here):
+- **Gate:** `flutter analyze` "No issues found!" and `flutter test` exit 0: **120 pass, 1 skipped** (opt-in live test). Backend unchanged: **167 passed, 1 skipped** (`pytest`).
+- **Demo runner tests (fake time, mock sensor and vision, real metrics engine inline):**
+  - full run: all 7 phases seen, three sets saved in order (squat, bench, squat), set 2 over its cap, set 3 with valgus faults, long buzz and "Knees out." cues, finished at exactly the planned 6:40;
+  - End session mid-demo stops it with nothing saved; "Take over" stops it and the buttons still work; Real mode refuses to start; a sensor that never feels the taps stops the demo with the reason instead of hanging.
+- **Widget test:** the Session tab button (hidden in Real mode), the narration bar with the clock, the runner pressing Continue at 0:30, and Take over.
+- **On the emulator** (debug APK, Android 16, throwaway API with fake LLM, real time, engine in its isolate), marks from logcat:
+  - connect 0:00 → goal 0:30 → positioning 0:50 → calibration 0:54.6 → calibrated 1:38.5;
+  - set 1 live 1:38.5, saved 1:57.3; set 2 setup 3:10.0, saved 3:34.9; set 3 setup 4:40.0, saved 5:01.5; closing 6:10.0; **done 6:40.0**;
+  - set 1 clean squat VL 10.7 %; set 2 bench **25.1 % of a 20 % cap, cap exceeded**, card −5 % / 240 s; set 3 squat **red skeleton, "Knees out."**, valgus ×2, card −5 % / 180 s; all three "Uploaded." with cards (rules `vl_well_below_cap`, `vl_cap_exceeded`, `valgus_repeated`, read back through `GET /sets`);
+  - no FATAL or Flutter errors in logcat.
+- **Opt-in live client test** (`MRFIT_LIVE_API=http://127.0.0.1:8765`) against the same throwaway API: passed.
+- **Bug found and fixed:** cards written by the backend's fake LLM were labelled "AI coach (local model)" like a real model. The badge now names the model (`2c00718`).
+
+Not verified:
+- **docker compose stack** (Docker not installed), so TimescaleDB migrations, real Ollama output and GPU are still unrun.
+- Physical phone (audio, vibration, screen-off, battery) and real hardware, as in 5d.
+
 
 ### Step 5d — 7-phase session (2026-11-21)
 Verified (run here):
@@ -214,6 +236,12 @@ Not verified: `docker compose up`, image build, GPU passthrough, model pull.
 Read `mrfit_reverse_engineer.md` and every v1 source file. Report and code mismatches were recorded (13 routes, not 9; `mr_fit.env.md` missing; tracked secret and DB files; `/ai-coach` unused; library versions unverifiable).
 
 ## Files changed per step
+
+### Step 6
+- **Demo runner:** `mobile/lib/app/session/demo_runner.dart` (new)
+- **Screens:** `mobile/lib/presentation/session/{session_page,session_tab}.dart` (narration bar, "Run scripted demo"), `mobile/lib/presentation/coach/coach_screen.dart` (model name on the badge)
+- **Tests:** `mobile/test/session/demo_runner_test.dart` (new), `mobile/test/presentation/{session_flow,coach_screen}_test.dart`
+- **Docs:** `mobile/README.md`, `docs/DECISIONS.md` (D-083), `docs/PROGRESS.md`
 
 ### Step 5d
 - **Session:** `mobile/lib/app/session/{session_controller,session_providers}.dart`, `mobile/lib/domain/session/session_ports.dart`, `mobile/lib/domain/metrics/metrics_session.dart`, `mobile/lib/domain/metrics/metrics_worker.dart` (implements `LiveMetricsSession`)

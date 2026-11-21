@@ -27,6 +27,11 @@ flutter test                   # unit, golden, data-layer and widget tests (fake
 sets: clean squat, fatigue bench press, valgus squat. **Settings → Data source** switches
 Mock/Real (Real needs the hardware REAL SLOTs, not implemented yet).
 
+**Run scripted demo** (Session tab, Mock mode only) plays the same session by itself: the
+three sets through all 7 phases in 6:40 (D-017, D-083), with a narration bar on top showing
+the phase, the demo clock and **Take over** (continue by hand). It presses the same buttons a
+user would; sign in first so the sets are uploaded and coached.
+
 The backend URL is entered on the sign-in screen (default `http://10.0.2.2:8000`, the
 emulator's alias for the PC). From a phone use `http://<PC-LAN-IP>:8000`.
 
@@ -54,7 +59,7 @@ lib/
   data/api|auth|storage    dio client with single-flight token refresh, typed endpoints, secure storage
   data/local|sync          drift + SQLCipher DB, SetRepository, SyncService (retry queue)
   features/food/           optional, isolated
-  app/session/             SessionController (7 phases), session providers
+  app/session/             SessionController (7 phases), DemoRunner (scripted demo), session providers
   data/feedback/           vibration + TTS cues, foreground service
   presentation/            screens (Riverpod): auth, track, library (+heatmap), stats, coach, session, settings
 ```
