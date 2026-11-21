@@ -61,6 +61,10 @@ final dataSourceProvider = Provider<DataSource>((ref) =>
         ? DataSource.simulated
         : DataSource.real);
 
+/// The bound sensor is simulated. The foreground service type follows the sensor alone:
+/// `dataSync` for the mock, `connectedDevice` for a real device (even if vision is mocked).
+final sensorSimulatedProvider = Provider<bool>((ref) => ref.watch(sensorSourceProvider) is MockSensorSource);
+
 /// True while any mock is bound -> the UI shows the "SIMULATED" banner.
 final anyMockActiveProvider = Provider<bool>((ref) => ref.watch(dataSourceProvider) == DataSource.simulated);
 

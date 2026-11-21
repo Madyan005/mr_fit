@@ -173,7 +173,7 @@ class SessionController extends Notifier<SessionState> {
     _cue = ref.read(cueOutputProvider);
     _keepAlive = ref.read(keepAliveProvider);
     _hooks = ref.read(simulationHooksProvider);
-    unawaited(_keepAlive!.start(simulated: ref.read(anyMockActiveProvider)));
+    unawaited(_keepAlive!.start(simulated: ref.read(sensorSimulatedProvider)));
     await (_attaching = _attachSensor());
   }
 

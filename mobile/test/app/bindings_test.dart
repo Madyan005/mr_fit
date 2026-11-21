@@ -45,9 +45,11 @@ void main() {
     final vision = container(realWith(vision: (ref) => MockVisionPipeline(world: ref.watch(mockWorldProvider))));
     expect(vision.read(dataSourceProvider), DataSource.simulated);
     expect(vision.read(anyMockActiveProvider), isTrue, reason: 'the SIMULATED banner stays');
+    expect(vision.read(sensorSimulatedProvider), isFalse, reason: 'real device: foreground type connectedDevice');
 
     final sensor = container(realWith(sensor: (ref) => MockSensorSource(world: ref.watch(mockWorldProvider))));
     expect(sensor.read(dataSourceProvider), DataSource.simulated);
+    expect(sensor.read(sensorSimulatedProvider), isTrue);
 
     expect(container(realWith()).read(dataSourceProvider), DataSource.real, reason: 'same list, nothing swapped');
   });
