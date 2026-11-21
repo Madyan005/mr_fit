@@ -46,8 +46,35 @@ class SyncService {
     return Duration(milliseconds: min(ms.toInt(), maxDelay.inMilliseconds));
   }
 
-  /// One pass. Concurrent callers share the pass that is already running.
-  Future<SyncReport> runOnce() => _running ??= _pass().whenComplete(() => _running = null);
+  bool _again = false;
+
+  /// One pass. A call while a pass is running joins it and makes it run once more at
+  /// the end: that pass chose its items before the caller's new items existed.
+  Future<SyncReport> runOnce() {
+    final running = _running;
+    if (running != null) {
+      _again = true;
+      return running;
+    }
+    return _running = _passes();
+  }
+
+  Future<SyncReport> _passes() async {
+    try {
+      var sent = 0, later = 0, failed = 0;
+      SyncReport r;
+      do {
+        _again = false;
+        r = await _pass();
+        sent += r.sent;
+        later += r.retryLater;
+        failed += r.failed;
+      } while (_again && r.stoppedReason == null);
+      return SyncReport(sent: sent, retryLater: later, failed: failed, stoppedReason: r.stoppedReason);
+    } finally {
+      _running = null;
+    }
+  }
 
   /// Periodic passes while the app runs (cheap when the queue is empty).
   void start({Duration every = const Duration(seconds: 30)}) {

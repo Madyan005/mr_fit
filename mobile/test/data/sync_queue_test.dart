@@ -156,6 +156,27 @@ void main() {
     expect(await db.select(db.localSets).get(), hasLength(1));
   });
 
+  test('a set saved while a pass is in flight is sent by a follow-up pass, not left for the timer', () async {
+    final gate = Completer<void>();
+    var held = false;
+    http.on('POST', '/sets', (_) async {
+      if (!held) {
+        held = true;
+        await gate.future; // first upload is slow
+      }
+      return (201, <String, Object?>{});
+    });
+    await repo.saveCompletedSet(payload, requestCoaching: false);
+    final inFlight = sync.runOnce();
+    await Future<void>.delayed(const Duration(milliseconds: 10)); // the pass picked its items
+    final second = SetSummaryPayload.fromJson({...payload.toJson(), 'set_id': '0b6f7c1e-8a52-4c1d-9a3e-3f1f0a0000ff'});
+    await repo.saveCompletedSet(second, requestCoaching: false);
+    gate.complete();
+    await inFlight; // no other trigger: the periodic timer is not running in this test
+    expect(http.count('POST', '/sets'), 2);
+    expect((await db.select(db.localSets).get()).every((s) => s.syncState == SyncState.synced), isTrue);
+  });
+
   test('an invalid payload is rejected before anything is stored', () async {
     final bad = SetSummaryPayload(
       setId: 'x', exercise: payload.exercise, goal: payload.goal, vlCapPct: payload.vlCapPct, setIndex: 1,
